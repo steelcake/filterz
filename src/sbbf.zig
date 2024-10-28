@@ -1,52 +1,61 @@
 const std = @import("std");
+const native_endian = @import("builtin").target.cpu.arch.endian();
 
-pub const Bucket = @Vector(8, u32);
+const Block = switch (native_endian) {
+    .little => @Vector(8, u32),
+    .big => @compileError("big endian is not supported"),
+};
 
-pub fn bucket_index(num_buckets: u32, hash: u32) u32 {
-    return @truncate((@as(u64, num_buckets) * @as(u64, hash)) >> 32);
+pub const BLOCK_SIZE = 32;
+
+pub fn block_index(num_blocks: u32, hash: u32) u32 {
+    return @truncate((@as(u64, num_blocks) * @as(u64, hash)) >> 32);
 }
 
-pub fn bucket_check(bucket: *align(32) const Bucket, hash: u32) bool {
+pub fn block_check(block: [*]align(BLOCK_SIZE) const u8, hash: u32) bool {
+    const block_ptr: *align(BLOCK_SIZE) const Block = @ptrCast(block);
     const mask = make_mask(hash);
-    const v = mask & bucket.*;
+    const v = mask & block_ptr.*;
     return std.simd.countElementsWithValue(v, 0) == 0;
 }
 
-pub fn bucket_insert(bucket: *align(32) Bucket, hash: u32) void {
+pub fn block_insert(block: [*]align(BLOCK_SIZE) u8, hash: u32) void {
+    const block_ptr: *align(BLOCK_SIZE) Block = @ptrCast(block);
     const mask = make_mask(hash);
-    bucket.* |= mask;
+    block_ptr.* |= mask;
 }
 
-pub fn bucket_insert_check(bucket: *align(32) Bucket, hash: u32) bool {
+pub fn block_insert_check(block: [*]align(BLOCK_SIZE) u8, hash: u32) bool {
+    const block_ptr: *align(BLOCK_SIZE) Block = @ptrCast(block);
     const mask = make_mask(hash);
-    const b = bucket.*;
+    const b = block_ptr.*;
     const v = mask & b;
     const res = std.simd.countElementsWithValue(v, 0) == 0;
-    bucket.* = b | mask;
+    block_ptr.* = b | mask;
     return res;
 }
 
-pub fn filter_check(filter: []align(32) const Bucket, hash: u32) bool {
-    const bucket_idx = bucket_index(filter.len, hash);
-    return bucket_check(&filter[bucket_idx], hash);
+pub fn filter_check(filter: []align(BLOCK_SIZE) const u8, hash: u32) bool {
+    const block_idx = block_index(filter.len, hash);
+    return block_check(filter[(block_idx * BLOCK_SIZE)..].ptr, hash);
 }
 
-pub fn filter_insert(filter: []align(32) Bucket, hash: u32) bool {
-    const bucket_idx = bucket_index(filter.len, hash);
-    return bucket_insert(&filter[bucket_idx], hash);
+pub fn filter_insert(filter: []align(BLOCK_SIZE) u8, hash: u32) bool {
+    const block_idx = block_index(filter.len, hash);
+    return block_insert(filter[(block_idx * BLOCK_SIZE)..].ptr, hash);
 }
 
-pub fn filter_insert_check(filter: []align(32) Bucket, hash: u32) bool {
-    const bucket_idx = bucket_index(filter.len, hash);
-    return bucket_insert_check(&filter[bucket_idx], hash);
+pub fn filter_insert_check(filter: []align(BLOCK_SIZE) u8, hash: u32) bool {
+    const block_idx = block_index(filter.len, hash);
+    return block_insert_check(filter[(block_idx * BLOCK_SIZE)..].ptr, hash);
 }
 
-fn make_mask(hash: u32) Bucket {
-    const shr_v: Bucket = @splat(27);
-    const ones: Bucket = @splat(1);
-    const hash_v: Bucket = @splat(hash);
-    const x: Bucket = (hash_v *% SALT) >> shr_v;
+fn make_mask(hash: u32) Block {
+    const shr_v: Block = @splat(27);
+    const ones: Block = @splat(1);
+    const hash_v: Block = @splat(hash);
+    const x: Block = (hash_v *% SALT) >> shr_v;
     return ones << @truncate(x);
 }
 
-const SALT = Bucket{ 0x47b6137b, 0x44974d91, 0x8824ad5b, 0xa2b7289d, 0x705495c7, 0x2df1424b, 0x9efc4947, 0x5c6bfb31 };
+const SALT align(BLOCK_SIZE) = Block{ 0x47b6137b, 0x44974d91, 0x8824ad5b, 0xa2b7289d, 0x705495c7, 0x2df1424b, 0x9efc4947, 0x5c6bfb31 };
