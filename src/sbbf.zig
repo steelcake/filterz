@@ -35,19 +35,22 @@ pub fn block_insert_check(block: [*]align(BLOCK_SIZE) u8, hash: u32) bool {
     return res;
 }
 
-pub fn filter_check(filter: []align(BLOCK_SIZE) const u8, hash: u32) bool {
+fn bucket_ptr(filter: []align(BLOCK_SIZE) const u8, hash: u32) [*]align(BLOCK_SIZE) u8 {
     const block_idx = block_index(filter.len / BLOCK_SIZE, hash);
-    return block_check(filter[(block_idx * BLOCK_SIZE)..].ptr, hash);
+    const filter_ptr = @intFromPtr(filter.ptr);
+    return @ptrFromInt(filter_ptr + block_idx * BLOCK_SIZE);
+}
+
+pub fn filter_check(filter: []align(BLOCK_SIZE) const u8, hash: u32) bool {
+    return block_check(bucket_ptr(filter, hash), hash);
 }
 
 pub fn filter_insert(filter: []align(BLOCK_SIZE) u8, hash: u32) bool {
-    const block_idx = block_index(filter.len / BLOCK_SIZE, hash);
-    return block_insert(filter[(block_idx * BLOCK_SIZE)..].ptr, hash);
+    return block_insert(bucket_ptr(filter, hash), hash);
 }
 
 pub fn filter_insert_check(filter: []align(BLOCK_SIZE) u8, hash: u32) bool {
-    const block_idx = block_index(filter.len / BLOCK_SIZE, hash);
-    return block_insert_check(filter[(block_idx * BLOCK_SIZE)..].ptr, hash);
+    return block_insert_check(bucket_ptr(filter, hash), hash);
 }
 
 fn make_mask(hash: u32) Block {
