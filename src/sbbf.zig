@@ -6,7 +6,7 @@ pub fn bucket_index(num_buckets: u32, hash: u32) u32 {
     return @truncate((@as(u64, num_buckets) * @as(u64, hash)) >> 32);
 }
 
-pub fn bucket_cont.*;ains(bucket: *const Bucket, hash: u32) bool {
+pub fn bucket_check(bucket: *const Bucket, hash: u32) bool {
     const mask = make_mask(hash);
     const v = mask & bucket.*;
     return std.simd.countElementsWithValue(v, 0) == 0;
@@ -17,7 +17,7 @@ pub fn bucket_insert(bucket: *Bucket, hash: u32) void {
     bucket.* |= mask;
 }
 
-pub fn bucket_insert_contains(bucket: *Bucket, hash: u32) bool {
+pub fn bucket_insert_check(bucket: *Bucket, hash: u32) bool {
     const mask = make_mask(hash);
     const b = bucket.*;
     const v = mask & b;
@@ -26,9 +26,9 @@ pub fn bucket_insert_contains(bucket: *Bucket, hash: u32) bool {
     return res;
 }
 
-pub fn filter_contains(filter: []const Bucket, hash: u32) bool {
+pub fn filter_check(filter: []const Bucket, hash: u32) bool {
     const bucket_idx = bucket_index(filter.len, hash);
-    return bucket_contains(&filter[bucket_idx], hash);
+    return bucket_check(&filter[bucket_idx], hash);
 }
 
 pub fn filter_insert(filter: []Bucket, hash: u32) bool {
@@ -36,9 +36,9 @@ pub fn filter_insert(filter: []Bucket, hash: u32) bool {
     return bucket_insert(&filter[bucket_idx], hash);
 }
 
-pub fn filter_insert_contains(filter: []Bucket, hash: u32) bool {
+pub fn filter_insert_check(filter: []Bucket, hash: u32) bool {
     const bucket_idx = bucket_index(filter.len, hash);
-    return bucket_insert_contains(&filter[bucket_idx], hash);
+    return bucket_insert_check(&filter[bucket_idx], hash);
 }
 
 fn make_mask(hash: u32) Bucket {
