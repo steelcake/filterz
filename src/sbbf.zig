@@ -1,23 +1,23 @@
 const std = @import("std");
 
-pub const Bucket align(64) = @Vector(8, u32);
+pub const Bucket = @Vector(8, u32);
 
 pub fn bucket_index(num_buckets: u32, hash: u32) u32 {
     return @truncate((@as(u64, num_buckets) * @as(u64, hash)) >> 32);
 }
 
-pub fn bucket_check(bucket: *const Bucket, hash: u32) bool {
+pub fn bucket_check(bucket: *align(64) const Bucket, hash: u32) bool {
     const mask = make_mask(hash);
     const v = mask & bucket.*;
     return std.simd.countElementsWithValue(v, 0) == 0;
 }
 
-pub fn bucket_insert(bucket: *Bucket, hash: u32) void {
+pub fn bucket_insert(bucket: *align(64) Bucket, hash: u32) void {
     const mask = make_mask(hash);
     bucket.* |= mask;
 }
 
-pub fn bucket_insert_check(bucket: *Bucket, hash: u32) bool {
+pub fn bucket_insert_check(bucket: *align(64) Bucket, hash: u32) bool {
     const mask = make_mask(hash);
     const b = bucket.*;
     const v = mask & b;
@@ -26,17 +26,17 @@ pub fn bucket_insert_check(bucket: *Bucket, hash: u32) bool {
     return res;
 }
 
-pub fn filter_check(filter: []const Bucket, hash: u32) bool {
+pub fn filter_check(filter: []align(64) const Bucket, hash: u32) bool {
     const bucket_idx = bucket_index(filter.len, hash);
     return bucket_check(&filter[bucket_idx], hash);
 }
 
-pub fn filter_insert(filter: []Bucket, hash: u32) bool {
+pub fn filter_insert(filter: []align(64) Bucket, hash: u32) bool {
     const bucket_idx = bucket_index(filter.len, hash);
     return bucket_insert(&filter[bucket_idx], hash);
 }
 
-pub fn filter_insert_check(filter: []Bucket, hash: u32) bool {
+pub fn filter_insert_check(filter: []align(64) Bucket, hash: u32) bool {
     const bucket_idx = bucket_index(filter.len, hash);
     return bucket_insert_check(&filter[bucket_idx], hash);
 }
