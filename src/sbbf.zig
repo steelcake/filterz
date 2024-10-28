@@ -36,17 +36,17 @@ pub fn block_insert_check(block: [*]align(BLOCK_SIZE) u8, hash: u32) bool {
 }
 
 pub fn filter_check(filter: []align(BLOCK_SIZE) const u8, hash: u32) bool {
-    const block_idx = block_index(filter.len, hash);
+    const block_idx = block_index(filter.len / BLOCK_SIZE, hash);
     return block_check(filter[(block_idx * BLOCK_SIZE)..].ptr, hash);
 }
 
 pub fn filter_insert(filter: []align(BLOCK_SIZE) u8, hash: u32) bool {
-    const block_idx = block_index(filter.len, hash);
+    const block_idx = block_index(filter.len / BLOCK_SIZE, hash);
     return block_insert(filter[(block_idx * BLOCK_SIZE)..].ptr, hash);
 }
 
 pub fn filter_insert_check(filter: []align(BLOCK_SIZE) u8, hash: u32) bool {
-    const block_idx = block_index(filter.len, hash);
+    const block_idx = block_index(filter.len / BLOCK_SIZE, hash);
     return block_insert_check(filter[(block_idx * BLOCK_SIZE)..].ptr, hash);
 }
 
