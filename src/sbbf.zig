@@ -6,7 +6,7 @@ pub fn bucket_index(num_buckets: u32, hash: u32) u32 {
     return @truncate((@as(u64, num_buckets) * @as(u64, hash)) >> 32);
 }
 
-pub fn bucket_contains(bucket: *const Bucket, hash: u32) bool {
+pub fn bucket_cont.*;ains(bucket: *const Bucket, hash: u32) bool {
     const mask = make_mask(hash);
     const v = mask & bucket.*;
     return std.simd.countElementsWithValue(v, 0) == 0;
@@ -19,9 +19,10 @@ pub fn bucket_insert(bucket: *Bucket, hash: u32) void {
 
 pub fn bucket_insert_contains(bucket: *Bucket, hash: u32) bool {
     const mask = make_mask(hash);
-    const v = mask & bucket.*;
+    const b = bucket.*;
+    const v = mask & b;
     const res = std.simd.countElementsWithValue(v, 0) == 0;
-    bucket.* |= mask;
+    bucket.* = b | mask;
     return res;
 }
 
