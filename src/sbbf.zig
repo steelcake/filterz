@@ -1,37 +1,52 @@
 const std = @import("std");
 const native_endian = @import("builtin").target.cpu.arch.endian();
 
-const Block = switch (native_endian) {
-    .little => @Vector(8, u32),
-    .big => @compileError("big endian is not supported"),
-};
+const Block = @Vector(8, u32);
 
 pub const BLOCK_SIZE = 32;
+
+fn load_block(block: [*]align(BLOCK_SIZE) const u8) Block {
+    const block_ptr: *align(BLOCK_SIZE) const Block = @ptrCast(block);
+    const block_v = block_ptr.*;
+
+    return switch (native_endian) {
+        .little => block_v,
+        .big => @byteSwap(block_v),
+    };
+}
+
+fn store_block(block: [*]align(BLOCK_SIZE) u8, block_v: Block) void {
+    const block_ptr: *align(BLOCK_SIZE) Block = @ptrCast(block);
+
+    block_ptr.* = switch (native_endian) {
+        .little => block_v,
+        .big => @byteSwap(block_v),
+    };
+}
 
 pub fn block_index(num_blocks: u32, hash: u32) u32 {
     return @truncate((@as(u64, num_blocks) * @as(u64, hash)) >> 32);
 }
 
 pub fn block_check(block: [*]align(BLOCK_SIZE) const u8, hash: u32) bool {
-    const block_ptr: *align(BLOCK_SIZE) const Block = @ptrCast(block);
+    const block_v = load_block(block);
     const mask = make_mask(hash);
-    const v = mask & block_ptr.*;
+    const v = mask & block_v;
     return std.simd.countElementsWithValue(v, 0) == 0;
 }
 
 pub fn block_insert(block: [*]align(BLOCK_SIZE) u8, hash: u32) void {
-    const block_ptr: *align(BLOCK_SIZE) Block = @ptrCast(block);
     const mask = make_mask(hash);
-    block_ptr.* |= mask;
+    const block_v = load_block(block);
+    store_block(block, block_v | mask);
 }
 
 pub fn block_insert_check(block: [*]align(BLOCK_SIZE) u8, hash: u32) bool {
-    const block_ptr: *align(BLOCK_SIZE) Block = @ptrCast(block);
     const mask = make_mask(hash);
-    const b = block_ptr.*;
-    const v = mask & b;
+    const block_v = load_block(block);
+    const v = mask & block_v;
     const res = std.simd.countElementsWithValue(v, 0) == 0;
-    block_ptr.* = b | mask;
+    store_block(block, block_v | mask);
     return res;
 }
 
