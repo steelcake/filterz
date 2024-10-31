@@ -13,8 +13,8 @@ fn reduce(len: u32, x: u32) u32 {
 
 fn make_subhashes(block_len: u32, h: u64) [3]u32 {
     const r0: u32 = @truncate(h);
-    const r1: u32 = @truncate(rotl(h, 21));
-    const r2: u32 = @truncate(rotl(h, 42));
+    const r1: u32 = @truncate(rotl(u64, h, 21));
+    const r2: u32 = @truncate(rotl(u64, h, 42));
     const h0 = reduce(block_len, r0);
     const h1 = reduce(block_len, r1) + block_len;
     const h2 = reduce(block_len, r2) + 2 * block_len;
@@ -42,24 +42,24 @@ pub const ConstructError = error{
 pub fn construct(comptime Fingerprint: type, alloc: Allocator, hashes: []u64, seed: *u64) ConstructError![]Fingerprint {
     const array_len: usize = @as(usize, @intFromFloat(32 + 1.23 * @as(f64, @floatFromInt(hashes.len)))) / 3 * 3;
 
-    var fingerprints = alloc.alloc(Fingerprint, array_len);
+    var fingerprints = try alloc.alloc(Fingerprint, array_len);
     errdefer alloc.free(fingerprints);
 
     @memset(fingerprints, 0);
 
-    var set_xormask = alloc.alloc(Fingerprint, array_len);
+    var set_xormask = try alloc.alloc(u64, array_len);
     defer alloc.free(set_xormask);
 
-    var set_count = alloc.alloc(u32, array_len);
+    var set_count = try alloc.alloc(u32, array_len);
     defer alloc.free(set_count);
 
-    var queue_i = alloc.alloc(u32, array_len);
+    var queue_i = try alloc.alloc(u32, array_len);
     defer alloc.free(queue_i);
 
-    var stack_i = alloc.alloc(u32, array_len);
+    var stack_i = try alloc.alloc(u32, array_len);
     defer alloc.free(stack_i);
 
-    var stack_h = alloc.alloc(u64, array_len);
+    var stack_h = try alloc.alloc(u64, array_len);
     defer alloc.free(stack_h);
 
     var rand = SplitMix64.init(seed.*);
@@ -74,10 +74,10 @@ pub fn construct(comptime Fingerprint: type, alloc: Allocator, hashes: []u64, se
         @memset(set_xormask, 0);
         @memset(set_count, 0);
 
-        const block_len = fingerprints.len / 3;
+        const block_len: u32 = @intCast(fingerprints.len / 3);
 
         for (hashes) |hash| {
-            const h = hash ^ seed;
+            const h = hash ^ next_seed;
             const subhashes = make_subhashes(block_len, h);
             for (subhashes) |subh| {
                 set_xormask[subh] ^= h;
@@ -87,7 +87,7 @@ pub fn construct(comptime Fingerprint: type, alloc: Allocator, hashes: []u64, se
 
         for (set_count, 0..) |count, i| {
             if (count == 1) {
-                queue_i[queue_len] = i;
+                queue_i[queue_len] = @intCast(i);
                 queue_len += 1;
             }
         }
@@ -128,7 +128,30 @@ pub fn construct(comptime Fingerprint: type, alloc: Allocator, hashes: []u64, se
             }
             fingerprints[i] = f;
         }
+
+        return fingerprints;
     }
 
-    return .ConstructFail;
+    return ConstructError.ConstructFail;
+}
+
+test "smoke" {
+    var rand = SplitMix64.init(0);
+    const num_hashes = 10000;
+    const alloc = std.testing.allocator;
+    var hashes = try alloc.alloc(u64, num_hashes);
+    defer alloc.free(hashes);
+
+    for (0..num_hashes) |i| {
+        hashes[i] = rand.next();
+    }
+
+    var seed = rand.next();
+    const fingerprints = try construct(u16, alloc, hashes, &seed);
+
+    for (hashes) |h| {
+        try std.testing.expect(check(u16, fingerprints, seed, h));
+    }
+
+    try std.testing.expect(check(u16, fingerprints, seed, 213213123));
 }
