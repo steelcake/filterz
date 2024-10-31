@@ -110,7 +110,10 @@ fn mapping_step(comptime Fingerprint: type, seed: u64, fingerprints: []Fingerpri
         const i = queue_i[queue_len];
         const h = queue_h[queue_len];
         if (set_count[i] == 1) {
-            
+            const subhashes = make_subhashes(block_len, h);
+            const 
+            stack_i[stack_len] = i;
+
         }
     }
 
