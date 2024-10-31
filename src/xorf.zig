@@ -42,29 +42,26 @@ pub const ConstructError = error{
 pub fn construct(comptime Fingerprint: type, alloc: Allocator, hashes: []u64, seed: *u64) ConstructError![]Fingerprint {
     const array_len: usize = @as(usize, @intFromFloat(32 + 1.23 * @as(f64, @floatFromInt(hashes.len)))) / 3 * 3;
 
-    const needed_bytes = array_len * @typeInfo(Fingerprint).int.bits / 8 + array_len * 28;
-    var buf = try alloc.alignedAlloc(u8, 8, array_len);
-    defer alloc.free(buf);
+    var fingerprints = alloc.alloc(Fingerprint, array_len);
+    errdefer alloc.free(fingerprints);
 
-    var fingerprints = try alloc.alloc(Fingerprint, array_len);
-    
-    var offset = 0;
-    var counts = @as(*u32, @ptrCast(buf.ptr))[offset..array_len];
-    offset += array_len * 4;
-    var xormask = @as(*u64, @ptrCast(buf.ptr))[offset..
+    var set_xormask = alloc.alloc(Fingerprint, array_len);
+    defer alloc.free(set_xormask);
 
-    var counts = try alloc.alloc(u32, array_len); 
-    defer alloc.free(counts);
-    var xormask = try alloc.alloc(Fingeprint, array_len);
-    defer alloc.free(xormask);
-    var stack_i = try alloc.alloc(u32, array_len);
-    defer alloc.free(stack_i);
-    var stack_h = try alloc.alloc(u64, array_len);
-    defer alloc.free(stack_h);
-    var queue_i = try alloc.alloc(u32, array_len);
+    var set_count = alloc.alloc(u32, array_len);
+    defer alloc.free(set_count);
+
+    var queue_i = alloc.alloc(u32, array_len);
     defer alloc.free(queue_i);
-    var queue_h = try alloc.alloc(u64, array_len);
+
+    var queue_h = alloc.alloc(u64, array_len);
     defer alloc.free(queue_h);
+
+    var stack_i = alloc.alloc(u32, array_len);
+    defer alloc.free(stack_i);
+
+    var stack_h = alloc.alloc(u64, array_len);
+    defer alloc.free(stack_h);
 
     var rand = SplitMix64.init(seed.*);
 
@@ -72,16 +69,50 @@ pub fn construct(comptime Fingerprint: type, alloc: Allocator, hashes: []u64, se
         const next_seed = rand.next();
         seed.* = next_seed;
         
-        if (mapping_step(Fingerprint, next_seed, fingerprints, hashes)) {
+        if (mapping_step(Fingerprint, next_seed, fingerprints, hashes, queue_i, queue_h, stack_i, stack_h, set_xormask, set_count)) {
             return .{ .fingerprints = fingerprints, .seed = seed };
         }
     }
 
-    alloc.free(fingerprints);
-
     return .ConstructFail;
 }
 
-fn mapping_step(comptime Fingerprint: type, seed: u64, fingerprints: []Fingerprint, hashes: []u64) bool {
-   return false; 
+fn mapping_step(comptime Fingerprint: type, seed: u64, fingerprints: []Fingerprint, hashes: []u64, queue_i: []u32, queue_h: []u64, stack_i: []u32, stack_h: []u64, set_xormask: []Fingerprint, set_count: []u32) bool {
+    var stack_len: u32 = 0;
+    var queue_len: u32 = 0;
+
+    @memset(set_xormask, 0);
+    @memset(set_count, 0);
+
+    const block_len = fingerprints.len / 3;
+
+    for (hashes) |hash| {
+        const h = hash ^ seed;
+        const subhashes = make_subhashes(block_len, h);
+        set_xormask[subhashes[0]] ^= h;
+        set_xormask[subhashes[1]] ^= h;
+        set_xormask[subhashes[2]] ^= h;
+        set_counts[subhashes[0]] += 1;
+        set_counts[subhashes[1]] += 1;
+        set_counts[subhashes[2]] += 1;
+    }
+
+    for (set_count, 0..) |count, i| {
+        if (count == 1) {
+            queue_i[queue_len] = i;
+            queue_h[queue_len] = set_xormask[i];
+            queue_len += 1;
+        }
+    }
+
+    while (queue_len > 0) {
+        queue_len -= 1;
+        const i = queue_i[queue_len];
+        const h = queue_h[queue_len];
+        if (set_count[i] == 1) {
+            
+        }
+    }
+
+    return false; 
 }
