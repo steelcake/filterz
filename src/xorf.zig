@@ -18,7 +18,7 @@ fn make_subhashes(block_len: u32, h: u64) [3]u32 {
     const h0 = reduce(block_len, r0);
     const h1 = reduce(block_len, r1) + block_len;
     const h2 = reduce(block_len, r2) + 2 * block_len;
-    return .{h0, h1, h2};
+    return .{ h0, h1, h2 };
 }
 
 pub fn check(comptime Fingerprint: type, fingerprints: []const Fingerprint, seed: u64, hash: u64) bool {
@@ -45,6 +45,8 @@ pub fn construct(comptime Fingerprint: type, alloc: Allocator, hashes: []u64, se
     var fingerprints = alloc.alloc(Fingerprint, array_len);
     errdefer alloc.free(fingerprints);
 
+    @memset(fingerprints, 0);
+
     var set_xormask = alloc.alloc(Fingerprint, array_len);
     defer alloc.free(set_xormask);
 
@@ -53,9 +55,6 @@ pub fn construct(comptime Fingerprint: type, alloc: Allocator, hashes: []u64, se
 
     var queue_i = alloc.alloc(u32, array_len);
     defer alloc.free(queue_i);
-
-    var queue_h = alloc.alloc(u64, array_len);
-    defer alloc.free(queue_h);
 
     var stack_i = alloc.alloc(u32, array_len);
     defer alloc.free(stack_i);
@@ -68,54 +67,68 @@ pub fn construct(comptime Fingerprint: type, alloc: Allocator, hashes: []u64, se
     for (0..NUM_TRIES) |_| {
         const next_seed = rand.next();
         seed.* = next_seed;
-        
-        if (mapping_step(Fingerprint, next_seed, fingerprints, hashes, queue_i, queue_h, stack_i, stack_h, set_xormask, set_count)) {
-            return .{ .fingerprints = fingerprints, .seed = seed };
+
+        var stack_len: u32 = 0;
+        var queue_len: u32 = 0;
+
+        @memset(set_xormask, 0);
+        @memset(set_count, 0);
+
+        const block_len = fingerprints.len / 3;
+
+        for (hashes) |hash| {
+            const h = hash ^ seed;
+            const subhashes = make_subhashes(block_len, h);
+            for (subhashes) |subh| {
+                set_xormask[subh] ^= h;
+                set_count[subh] += 1;
+            }
+        }
+
+        for (set_count, 0..) |count, i| {
+            if (count == 1) {
+                queue_i[queue_len] = i;
+                queue_len += 1;
+            }
+        }
+
+        while (queue_len > 0) {
+            queue_len -= 1;
+            const i = queue_i[queue_len];
+            if (set_count[i] == 1) {
+                const h = set_xormask[i];
+                stack_h[stack_len] = h;
+                stack_i[stack_len] = i;
+                stack_len += 1;
+                const subhashes = make_subhashes(block_len, h);
+                inline for (subhashes) |subh| {
+                    set_xormask[subh] ^= h;
+                    set_count[subh] -= 1;
+                    if (set_count[subh] == 1) {
+                        queue_i[queue_len] = subh;
+                        queue_len += 1;
+                    }
+                }
+            }
+        }
+
+        if (stack_len < array_len) {
+            continue;
+        }
+
+        while (stack_len > 0) {
+            stack_len -= 1;
+            const h = stack_h[stack_len];
+            const i = stack_i[stack_len];
+            const subhashes = make_subhashes(block_len, h);
+            var f = make_fingerprint(Fingerprint, h);
+            fingerprints[i] = 0;
+            inline for (subhashes) |subh| {
+                f ^= fingerprints[subh];
+            }
+            fingerprints[i] = f;
         }
     }
 
     return .ConstructFail;
-}
-
-fn mapping_step(comptime Fingerprint: type, seed: u64, fingerprints: []Fingerprint, hashes: []u64, queue_i: []u32, queue_h: []u64, stack_i: []u32, stack_h: []u64, set_xormask: []Fingerprint, set_count: []u32) bool {
-    var stack_len: u32 = 0;
-    var queue_len: u32 = 0;
-
-    @memset(set_xormask, 0);
-    @memset(set_count, 0);
-
-    const block_len = fingerprints.len / 3;
-
-    for (hashes) |hash| {
-        const h = hash ^ seed;
-        const subhashes = make_subhashes(block_len, h);
-        set_xormask[subhashes[0]] ^= h;
-        set_xormask[subhashes[1]] ^= h;
-        set_xormask[subhashes[2]] ^= h;
-        set_counts[subhashes[0]] += 1;
-        set_counts[subhashes[1]] += 1;
-        set_counts[subhashes[2]] += 1;
-    }
-
-    for (set_count, 0..) |count, i| {
-        if (count == 1) {
-            queue_i[queue_len] = i;
-            queue_h[queue_len] = set_xormask[i];
-            queue_len += 1;
-        }
-    }
-
-    while (queue_len > 0) {
-        queue_len -= 1;
-        const i = queue_i[queue_len];
-        const h = queue_h[queue_len];
-        if (set_count[i] == 1) {
-            const subhashes = make_subhashes(block_len, h);
-            const 
-            stack_i[stack_len] = i;
-
-        }
-    }
-
-    return false; 
 }
