@@ -56,8 +56,8 @@ pub fn construct(comptime Fingerprint: type, alloc: Allocator, hashes: []u64, se
     var queue = try alloc.alloc(u32, array_len);
     defer alloc.free(queue);
 
-    var stack_h = try alloc.alloc(u64, array_len);
-    defer alloc.free(stack_h);
+    var stack_i = try alloc.alloc(u32, array_len);
+    defer alloc.free(stack_i);
 
     var stack_hi = try alloc.alloc(u8, array_len);
     defer alloc.free(stack_hi);
@@ -87,7 +87,7 @@ pub fn construct(comptime Fingerprint: type, alloc: Allocator, hashes: []u64, se
 
         for (set_count, 0..) |count, i| {
             if (count == 1) {
-                queue[queue_len] = @intCast(i);
+                queue[queue_len] = i; 
                 queue_len += 1;
             }
         }
@@ -98,40 +98,34 @@ pub fn construct(comptime Fingerprint: type, alloc: Allocator, hashes: []u64, se
             if (set_count[i] == 1) {
                 const h = set_xormask[i];
                 const subhashes = make_subhashes(block_len, h);
-                stack_h[stack_len] = h;
                 inline for (subhashes, 0..) |subh, hi| {
                     set_xormask[subh] ^= h;
                     set_count[subh] -= 1;
                     if (subh == i) {
-                        stack_hi[stack_len] = hi;
+                        queue_hi[queue_len] = hi;
                     } else if (set_count[subh] == 1) {
-                        queue[queue_len] = subh;
+                        queue_i[queue_len] = i;
                         queue_len += 1;
                     }
                 }
-                stack_len += 1;
             }
         }
 
-        if (stack_len < hashes.len) {
+        if (stack_len < array_len) {
             continue;
         }
 
         while (stack_len > 0) {
             stack_len -= 1;
             const h = stack_h[stack_len];
-            const hi = stack_hi[stack_len];
+            const i = stack_i[stack_len];
             const subhashes = make_subhashes(block_len, h);
             var f = make_fingerprint(Fingerprint, h);
-            var to_change: u32 = undefined;
-            inline for (subhashes, 0..) |subh, shi| {
-                if (shi == hi) {
-                    to_change = subh;
-                } else {
-                    f ^= fingerprints[subh];
-                }
+            fingerprints[i] = 0;
+            inline for (subhashes) |subh| {
+                f ^= fingerprints[subh];
             }
-            fingerprints[to_change] = f;
+            fingerprints[i] = f;
         }
 
         return fingerprints;
@@ -142,20 +136,21 @@ pub fn construct(comptime Fingerprint: type, alloc: Allocator, hashes: []u64, se
 
 test "smoke" {
     var rand = SplitMix64.init(0);
-    const num_hashes = 10000;
+    const num_hashes = 19;
     const alloc = std.testing.allocator;
     var hashes = try alloc.alloc(u64, num_hashes);
     defer alloc.free(hashes);
 
     for (0..num_hashes) |i| {
-        hashes[i] = rand.next();
+        hashes[i] = i;
     }
 
     var seed = rand.next();
     const fingerprints = try construct(u16, alloc, hashes, &seed);
-    defer alloc.free(fingerprints);
 
     for (hashes) |h| {
         try std.testing.expect(check(u16, fingerprints, seed, h));
     }
+
+    try std.testing.expect(check(u16, fingerprints, seed, 213213123));
 }
