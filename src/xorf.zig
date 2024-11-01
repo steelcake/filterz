@@ -159,3 +159,50 @@ test "smoke" {
         try std.testing.expect(check(u16, 3, fingerprints, seed, h));
     }
 }
+
+fn to_fuzz(input: []const u8) anyerror!void {
+    if (input.len < 8) {
+        return;
+    }
+
+    const alloc = std.testing.allocator;
+
+    var hashes = try alloc.alloc(u64, input.len);
+    defer alloc.free(hashes);
+
+    var rand = SplitMix64.init(0);
+
+    for (input, 0..) |*b, i| {
+        const h = std.hash.XxHash3.hash(rand.next(), b[0..1]);
+        hashes[i] = h;
+    }
+
+    var seed = rand.next();
+    const fingerprints = try construct(u8, 3, alloc, hashes, &seed);
+    defer alloc.free(fingerprints);
+
+    for (hashes) |h| {
+        try std.testing.expect(check(u8, 3, fingerprints, seed, h));
+    }
+
+    for (0..1000) |x| {
+        const h = std.hash.XxHash3.hash(rand.next(), std.mem.toBytes(x));
+        if (!check(u8, 3, fingerprints, seed, h)) {
+            try std.testing.expect(!contains(u64, hashes, h));
+        }
+    }
+}
+
+fn contains(comptime T: type, slice: []T, v: T) bool {
+    for (slice) |x| {
+        if (x == v) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+test "fuzz" {
+    try std.testing.fuzz(to_fuzz, .{});
+}
