@@ -148,7 +148,7 @@ test "smoke" {
     defer alloc.free(hashes);
 
     for (0..num_hashes) |i| {
-        hashes[i] = rand.next();
+        hashes[i] = std.hash.XxHash3.hash(rand.next(), std.mem.asBytes(&rand.next()));
     }
 
     var seed = rand.next();
