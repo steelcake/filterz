@@ -11,20 +11,44 @@ fn reduce(len: u32, x: u32) u32 {
     return @truncate((@as(u64, len) * @as(u64, x)) >> 32);
 }
 
-fn make_subhashes(comptime arity: comptime_int, block_len: u32, h: u64) [arity]u32 {
+fn reduce64(len: 64, x: 64) 64 {
+    return @truncate((@as(u128, len) * @as(u128, x)) >> 64);
+}
+
+pub const Header = struct {
+    seed: u64,
+    segment_len: u32,
+    segment_count_len: u32,
+};
+
+pub fn prepare_subhashes(comptime arity: comptime_int, header: *const Header, hash: u64) [arity]u32 {
+    return make_subhashes(arity, header, hash ^ header.seed);
+}
+
+fn make_subhashes(comptime arity: comptime_int, header: *const Header, h: u64) [arity]u32 {
+    const hl = reduce64(@as(u64, header.segment_count_len), h);
+
     var subhashes: [arity]u32 = undefined;
     comptime var rot = 0;
     inline for (0..arity) |i| {
-        subhashes[i] = reduce(block_len, @truncate(rotl(u64, h, rot))) + block_len * @as(u32, @intCast(i));
+        subhashes[i] = (hl + i * @as(u64, header.segment_len)) ^ (rotl(u64, h, rot) & (header.segment_len - 1));
         rot += 64 / arity;
     }
     return subhashes;
 }
 
-pub fn check(comptime Fingerprint: type, comptime arity: comptime_int, fingerprints: []const Fingerprint, seed: u64, hash: u64) bool {
-    const block_len: u32 = @intCast(fingerprints.len / arity);
-    const h = hash ^ seed;
-    const subhashes = make_subhashes(arity, block_len, h);
+pub fn check_prepared(comptime Fingerprint: type, comptime arity: comptime_int, header: *const Header, fingerprints: [arity]Fingerprint, subhashes: [arity]u32, hash: u64) bool {
+    const h = hash ^ header.seed;
+    var f = make_fingerprint(Fingerprint, h);
+    inline for (subhashes) |sh| {
+        f ^= fingerprints[sh];
+    }
+    return f == 0;
+}
+
+pub fn check(comptime Fingerprint: type, comptime arity: comptime_int, header: *const Header, fingerprints: []const Fingerprint, hash: u64) bool {
+    const h = hash ^ header.seed;
+    const subhashes = make_subhashes(arity, header, h);
     var f = make_fingerprint(Fingerprint, h);
     inline for (subhashes) |sh| {
         f ^= fingerprints[sh];
@@ -39,7 +63,7 @@ pub const ConstructError = error{
     ConstructFail,
 };
 
-pub fn construct(comptime Fingerprint: type, comptime arity: comptime_int, alloc: Allocator, hashes: []u64, seed: *u64) ConstructError![]Fingerprint {
+pub fn construct(comptime Fingerprint: type, comptime arity: comptime_int, alloc: Allocator, hashes: []u64, seed: *u64, header: *Header) ConstructError![]Fingerprint {
     const array_len: usize = @as(usize, @intFromFloat(32 + 1.23 * @as(f64, @floatFromInt(hashes.len))));
 
     var fingerprints = try alloc.alloc(Fingerprint, array_len);
