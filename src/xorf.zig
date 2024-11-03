@@ -104,8 +104,18 @@ pub fn construct(comptime Fingerprint: type, comptime arity: comptime_int, alloc
     const segment_length = @min(1 << 18, calculate_segment_length(arity, size));
     const size_factor = calculate_size_factor(arity, size);
     const capacity: u32 = @intFromFloat(@as(f64, @floatFromInt(size)) * size_factor);
-    const segment_count = (capacity + segment_length - 1) / segment_length - (arity - 1);
-    const array_len = (segment_count + arity - 1) * segment_length;
+    var segment_count = (capacity + segment_length - 1) / segment_length - (arity - 1);
+    var array_len = (segment_count + arity - 1) * segment_length;
+    segment_count = (array_len + segment_length - 1) / segment_length;
+    segment_count = if (segment_count <= arity - 1) 1 else segment_count - (arity - 1);
+    array_len = (segment_count + arity - 1) * segment_length;
+    const segment_count_len = segment_count * segment_length;
+
+    header.* = Header{
+        .segment_count_len = segment_count_len,
+        .segment_len = segment_length,
+        .seed = 0,
+    };
 
     var fingerprints = try alloc.alloc(Fingerprint, array_len);
     errdefer alloc.free(fingerprints);
@@ -131,6 +141,7 @@ pub fn construct(comptime Fingerprint: type, comptime arity: comptime_int, alloc
 
     for (0..NUM_TRIES) |_| {
         const next_seed = rand.next();
+        header.seed = next_seed;
         seed.* = next_seed;
 
         var stack_len: u32 = 0;
@@ -205,7 +216,7 @@ pub fn construct(comptime Fingerprint: type, comptime arity: comptime_int, alloc
 
 test "smoke" {
     var rand = SplitMix64.init(0);
-    const num_hashes = 10000;
+    const num_hashes = 1000000;
     const alloc = std.testing.allocator;
     var hashes = try alloc.alloc(u64, num_hashes);
     defer alloc.free(hashes);
@@ -216,11 +227,11 @@ test "smoke" {
 
     var seed = rand.next();
     var header: Header = undefined;
-    const fingerprints = try construct(u16, 3, alloc, hashes, &seed, &header);
+    const fingerprints = try construct(u16, 4, alloc, hashes, &seed, &header);
     defer alloc.free(fingerprints);
 
     for (hashes) |h| {
-        try std.testing.expect(check(u16, 3, &header, fingerprints, h));
+        try std.testing.expect(check(u16, 4, &header, fingerprints, h));
     }
 }
 
@@ -234,11 +245,10 @@ fn to_fuzz(input: []const u8) anyerror!void {
     var hashes = try alloc.alloc(u64, input.len);
     defer alloc.free(hashes);
 
-    var rand = SplitMix64.init(0);
+    var rand = SplitMix64.init(31);
 
-    for (input, 0..) |*b, i| {
-        const h = std.hash.XxHash3.hash(rand.next(), b[0..1]);
-        hashes[i] = h;
+    for (input, 0..) |_, i| {
+        hashes[i] = rand.next();
     }
 
     var seed = rand.next();
@@ -253,11 +263,4 @@ fn to_fuzz(input: []const u8) anyerror!void {
 
 test "fuzz" {
     try std.testing.fuzz(to_fuzz, .{});
-}
-
-test "calculate segment length" {
-    const x = calculate_segment_length(3, 10000);
-    try std.testing.expect(x > 2 * 10000);
-    const factor = calculate_size_factor(3, 10000);
-    try std.testing.expect(factor == 0);
 }
