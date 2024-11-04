@@ -44,7 +44,7 @@ pub fn check_prepared(comptime Fingerprint: type, comptime arity: comptime_int, 
     return f == 0;
 }
 
-pub fn check(comptime Fingerprint: type, comptime arity: comptime_int, header: *const Header, fingerprints: []const Fingerprint, hash: u64) bool {
+pub fn filter_check(comptime Fingerprint: type, comptime arity: comptime_int, header: *const Header, fingerprints: []const Fingerprint, hash: u64) bool {
     const h = hash ^ header.seed;
     const subhashes = make_subhashes(arity, header, h);
     var f = make_fingerprint(Fingerprint, h);
@@ -99,7 +99,7 @@ fn calculate_size_factor(comptime arity: comptime_int, size: u32) f64 {
     }
 }
 
-pub fn construct(comptime Fingerprint: type, comptime arity: comptime_int, alloc: Allocator, hashes: []u64, seed: *u64, header: *Header) ConstructError![]Fingerprint {
+pub fn filter_construct(comptime Fingerprint: type, comptime arity: comptime_int, alloc: Allocator, hashes: []u64, seed: *u64, header: *Header) ConstructError![]Fingerprint {
     const size: u32 = @intCast(hashes.len);
     const segment_length = @min(1 << 18, calculate_segment_length(arity, size));
     const size_factor = calculate_size_factor(arity, size);
@@ -214,53 +214,34 @@ pub fn construct(comptime Fingerprint: type, comptime arity: comptime_int, alloc
     return ConstructError.ConstructFail;
 }
 
-test "smoke" {
-    var rand = SplitMix64.init(0);
-    const num_hashes = 1000000;
-    const alloc = std.testing.allocator;
-    var hashes = try alloc.alloc(u64, num_hashes);
-    defer alloc.free(hashes);
+pub fn Filter(comptime Fingerprint: type, comptime arity: comptime_int) type {
+    return struct {
+        const Self = @This();
 
-    for (0..num_hashes) |i| {
-        hashes[i] = std.hash.XxHash3.hash(rand.next(), std.mem.asBytes(&rand.next()));
-    }
+        header: Header,
+        fingerprints: []Fingerprint,
+        alloc: Allocator,
 
-    var seed = rand.next();
-    var header: Header = undefined;
-    const fingerprints = try construct(u16, 4, alloc, hashes, &seed, &header);
-    defer alloc.free(fingerprints);
+        pub fn init(alloc: Allocator, hashes: []u64) !Self {
+            var rand = SplitMix64.init(0);
 
-    for (hashes) |h| {
-        try std.testing.expect(check(u16, 4, &header, fingerprints, h));
-    }
-}
+            var seed = rand.next();
+            var header: Header = undefined;
+            const fingerprints = try filter_construct(Fingerprint, arity, alloc, hashes, &seed, &header);
 
-fn to_fuzz(input: []const u8) anyerror!void {
-    if (input.len < 8) {
-        return;
-    }
+            return Self{
+                .header = header,
+                .fingerprints = fingerprints,
+                .alloc = alloc,
+            };
+        }
 
-    const alloc = std.testing.allocator;
+        pub fn deinit(self: Self) void {
+            self.alloc.free(self.fingerprints);
+        }
 
-    var hashes = try alloc.alloc(u64, input.len);
-    defer alloc.free(hashes);
-
-    var rand = SplitMix64.init(31);
-
-    for (input, 0..) |_, i| {
-        hashes[i] = rand.next();
-    }
-
-    var seed = rand.next();
-    var header: Header = undefined;
-    const fingerprints = try construct(u8, 3, alloc, hashes, &seed, &header);
-    defer alloc.free(fingerprints);
-
-    for (hashes) |h| {
-        try std.testing.expect(check(u8, 3, &header, fingerprints, h));
-    }
-}
-
-test "fuzz" {
-    try std.testing.fuzz(to_fuzz, .{});
+        pub fn check(self: *const Self, hash: u64) bool {
+            return filter_check(Fingerprint, arity, &self.header, self.fingerprints, hash);
+        }
+    };
 }

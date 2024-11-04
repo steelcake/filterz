@@ -1,5 +1,6 @@
 const std = @import("std");
 const native_endian = @import("builtin").target.cpu.arch.endian();
+const Allocator = std.mem.Allocator;
 
 const Block = @Vector(8, u32);
 
@@ -51,7 +52,7 @@ pub fn block_insert_check(block: [*]align(BLOCK_SIZE) u8, hash: u32) bool {
 }
 
 fn filter_to_block_ptr(filter: []align(BLOCK_SIZE) const u8, hash: u32) [*]align(BLOCK_SIZE) u8 {
-    const block_idx = block_index(filter.len / BLOCK_SIZE, hash);
+    const block_idx = block_index(@as(u32, @intCast(filter.len)) / BLOCK_SIZE, hash);
     const filter_ptr = @intFromPtr(filter.ptr);
     return @ptrFromInt(filter_ptr + block_idx * BLOCK_SIZE);
 }
@@ -60,7 +61,7 @@ pub fn filter_check(filter: []align(BLOCK_SIZE) const u8, hash: u32) bool {
     return block_check(filter_to_block_ptr(filter, hash), hash);
 }
 
-pub fn filter_insert(filter: []align(BLOCK_SIZE) u8, hash: u32) bool {
+pub fn filter_insert(filter: []align(BLOCK_SIZE) u8, hash: u32) void {
     return block_insert(filter_to_block_ptr(filter, hash), hash);
 }
 
@@ -77,3 +78,33 @@ fn make_mask(hash: u32) Block {
 }
 
 const SALT align(BLOCK_SIZE) = Block{ 0x47b6137b, 0x44974d91, 0x8824ad5b, 0xa2b7289d, 0x705495c7, 0x2df1424b, 0x9efc4947, 0x5c6bfb31 };
+
+pub fn Filter(comptime bits_per_key: comptime_int) type {
+    return struct {
+        const Self = @This();
+
+        data: []align(BLOCK_SIZE) u8,
+        alloc: Allocator,
+
+        pub fn init(alloc: Allocator, hashes: []u64) !Self {
+            const bytes = try alloc.alignedAlloc(u8, BLOCK_SIZE, bits_per_key * hashes.len);
+
+            for (hashes) |h| {
+                filter_insert(bytes, @truncate(h));
+            }
+
+            return Self{
+                .data = bytes,
+                .alloc = alloc,
+            };
+        }
+
+        pub fn deinit(self: Self) void {
+            self.alloc.free(self.data);
+        }
+
+        pub fn check(self: *const Self, hash: u64) bool {
+            return filter_check(self.data, @truncate(hash));
+        }
+    };
+}
