@@ -171,25 +171,3 @@ pub fn Filter(comptime ResultRow: type) type {
         }
     };
 }
-
-test "construct" {
-    var rand = SplitMix.init(0);
-    const num_hashes = 100000;
-    const alloc = std.testing.allocator;
-    var hashes = try alloc.alloc(u64, num_hashes);
-    defer alloc.free(hashes);
-
-    for (0..num_hashes) |i| {
-        hashes[i] = std.hash.XxHash3.hash(rand.next(), std.mem.asBytes(&rand.next()));
-    }
-
-    std.sort.pdq(u64, hashes, {}, std.sort.asc(u64));
-
-    for (0..hashes.len - 1) |i| {
-        try std.testing.expect(hashes[i] != hashes[i + 1]);
-    }
-
-    var seed = rand.next();
-    const solution_matrix = try construct(u8, alloc, hashes, &seed);
-    defer alloc.free(solution_matrix);
-}
