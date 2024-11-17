@@ -109,7 +109,7 @@ pub fn construct(comptime ResultRow: type, alloc: Allocator, hashes: []u64, seed
                 for (0..result_bits) |j| {
                     var tmp: u128 = std.math.shl(u128, state[j], 1);
                     const bit = bit_parity(tmp & coeff_row) ^ (@as(u8, @truncate(std.math.shr(ResultRow, result_row, j))) & 1);
-                    tmp |= bit;
+                    tmp |= @as(u128, bit);
                     state[j] = tmp;
                     solution_row |= std.math.shl(ResultRow, @as(ResultRow, @intCast(bit)), j);
                 }
@@ -132,7 +132,7 @@ fn check_filter(comptime ResultRow: type, solution_matrix: []ResultRow, seed: u6
 
     var result_row: ResultRow = 0;
     for (0..@typeInfo(ResultRow).int.bits) |i| {
-        const rr: ResultRow = @truncate(std.math.shl(u128, coeff_row, i));
+        const rr: ResultRow = @truncate(std.math.shr(u128, coeff_row, i));
         result_row ^= solution_matrix[start_pos + i] & (0 -% (rr & 1));
     }
 
@@ -154,7 +154,7 @@ pub fn Filter(comptime ResultRow: type) type {
         alloc: Allocator,
 
         pub fn init(alloc: Allocator, hashes: []u64) !Self {
-            var seed: u64 = 0;
+            var seed: u64 = 12;
             const solution_matrix = try construct(ResultRow, alloc, hashes, &seed);
 
             return Self{
