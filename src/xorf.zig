@@ -243,5 +243,9 @@ pub fn Filter(comptime Fingerprint: type, comptime arity: comptime_int) type {
         pub fn check(self: *const Self, hash: u64) bool {
             return filter_check(Fingerprint, arity, &self.header, self.fingerprints, hash);
         }
+
+        pub fn mem_usage(self: *const Self) usize {
+            return self.fingerprints.len * @typeInfo(Fingerprint).int.bits / 8;
+        }
     };
 }

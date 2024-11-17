@@ -28,11 +28,31 @@ pub fn main() !void {
         const section = addrs[start .. start + idx];
         try sections.append(section);
         start += idx;
-
-        std.debug.assert(section.len == idx);
     }
 
-    try print_hex(alloc, sections.items[69][21]);
+    //try print_hex(alloc, sections.items[69][21]);
+
+    var total_mem_usage: usize = 0;
+
+    for (sections.items) |section| {
+        var len: usize = 0;
+        const hashes = try hash_section(alloc, section, &len);
+        defer alloc.free(hashes);
+
+        total_mem_usage += try filter_mem_usage(alloc, hashes[0..len]);
+    }
+
+    std.debug.print("total_mem_usage={d}\n", .{total_mem_usage});
+}
+
+fn filter_mem_usage(alloc: Allocator, hashes: []u64) !usize {
+    for (1..hashes.len) |i| {
+        std.debug.assert(hashes[i - 1] != hashes[i]);
+    }
+    const filter = try filterz.ribbon.Filter(u16).init(alloc, hashes);
+    //const filter = try filterz.xorf.Filter(u16, 3).init(alloc, hashes);
+    defer filter.deinit();
+    return filter.mem_usage();
 }
 
 fn hash_section(alloc: Allocator, section: []const Address, len: *usize) ![]u64 {
@@ -49,12 +69,12 @@ fn hash_section(alloc: Allocator, section: []const Address, len: *usize) ![]u64 
 
     for (hashes[1..]) |h| {
         if (h != hashes[write_idx]) {
-            hashes[write_idx] = h;
             write_idx += 1;
+            hashes[write_idx] = h;
         }
     }
 
-    len.* = write_idx;
+    len.* = write_idx + 1;
 
     return hashes;
 }

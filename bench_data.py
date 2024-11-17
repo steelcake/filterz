@@ -4,7 +4,7 @@ import asyncio
 
 DATA_FILE_PATH = "addr.data"
 INDEX_FILE_PATH = "addr.index"
-TOTAL_TX = 100000000
+TOTAL_TX = 10000000
 TX_PER_SECTION = 100000
 
 async def main():

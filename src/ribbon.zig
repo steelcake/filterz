@@ -169,5 +169,9 @@ pub fn Filter(comptime ResultRow: type) type {
         pub fn check(self: *const Self, hash: u64) bool {
             return check_filter(ResultRow, self.solution_matrix, self.seed, hash);
         }
+
+        pub fn mem_usage(self: *const Self) usize {
+            return self.solution_matrix.len * @typeInfo(ResultRow).int.bits / 8;
+        }
     };
 }
