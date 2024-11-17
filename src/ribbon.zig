@@ -142,7 +142,7 @@ fn check_filter(comptime ResultRow: type, solution_matrix: []ResultRow, seed: u6
 fn bit_parity(val: u128) u8 {
     const lower: u64 = @truncate(val);
     const higher: u64 = @truncate(val >> 64);
-    return @truncate((lower ^ higher) & 1);
+    return @popCount(lower ^ higher) & 1;
 }
 
 pub fn Filter(comptime ResultRow: type) type {
