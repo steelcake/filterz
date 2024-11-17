@@ -131,7 +131,7 @@ fn check_filter(comptime ResultRow: type, solution_matrix: []ResultRow, seed: u6
     const expected_result_row = calculate_result_row(ResultRow, seed, hash);
 
     var result_row: ResultRow = 0;
-    for (0..@typeInfo(ResultRow).int.bits) |i| {
+    for (0..128) |i| {
         const rr: ResultRow = @truncate(std.math.shr(u128, coeff_row, i));
         result_row ^= solution_matrix[start_pos + i] & (0 -% (rr & 1));
     }
@@ -140,9 +140,7 @@ fn check_filter(comptime ResultRow: type, solution_matrix: []ResultRow, seed: u6
 }
 
 fn bit_parity(val: u128) u8 {
-    const lower: u64 = @truncate(val);
-    const higher: u64 = @truncate(val >> 64);
-    return @popCount(lower ^ higher) & 1;
+    return @popCount(val) & 1;
 }
 
 pub fn Filter(comptime ResultRow: type) type {
