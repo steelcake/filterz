@@ -68,6 +68,9 @@ const FILTERS = [_]type{
     xorf.Filter(u8, 3),
     xorf.Filter(u32, 4),
     xorf.Filter(u32, 3),
+    //ribbon.Filter(u8),
+    ribbon.Filter(u16),
+    //ribbon.Filter(u32),
 };
 
 test "fuzz" {
