@@ -2,48 +2,55 @@ import hypersync
 from hypersync import TransactionField, ClientConfig, Query, TransactionSelection, FieldSelection, StreamConfig
 import asyncio
 
-FILE_PATH = "addr.data"
+DATA_FILE_PATH = "addr.data"
+INDEX_FILE_PATH = "addr.index"
+TOTAL_TX = 100000000
+TX_PER_SECTION = 100000
 
-async def main(): 
+async def main():
     client = hypersync.HypersyncClient(ClientConfig())
-
     query = Query(
-        from_block=0,
+        from_block=18123123,
         transactions=[TransactionSelection()],
         field_selection=FieldSelection(
             transaction=[
                 TransactionField.FROM,
-                TransactionField.TO,
             ]
         ),
     )
 
-    receiver = await client.stream(query, StreamConfig())
+    receiver = await client.stream_arrow(query, StreamConfig())
 
-    addrs = []
+    data_file = open(DATA_FILE_PATH, 'wb')
+    index_file = open(INDEX_FILE_PATH, 'w')
 
-    file = open(FILE_PATH, 'w')
+    num_addrs = 0
+    num_tx = 0
+    total_num_tx = 0
 
     while True:
         res = await receiver.recv()
 
         if res is None:
+            index_file.write(' ' + str(num_addrs))
             break
 
-        for tx in res.data.transactions:
-            from_ = tx.from_ 
-            to = tx.to
-            if from_ is not None:
-                addrs.append(from_)
-            if to is not None:
-                addrs.append(to)
+        for addr in res.data.transactions.column('from'):
+            num_tx += 1
+            total_num_tx += 1
+            if addr is not None:
+                num_addrs += 1
+                data_file.write(addr.as_buffer())
 
-        if len(addrs) > 1000: 
-            for addr in addrs:
-                file.write(addr);
+        if total_num_tx >= TOTAL_TX:
+            index_file.write(' ' + str(num_addrs))
+            break
+        elif num_tx >= TX_PER_SECTION:
+            index_file.write(' ' + str(num_addrs))
+            num_addrs = 0
+            num_tx = 0
 
-            addrs = []
-
-    file.close()
+    data_file.close()
+    index_file.close()
 
 asyncio.run(main())
