@@ -87,7 +87,7 @@ pub fn Filter(comptime bits_per_key: comptime_int) type {
         alloc: Allocator,
 
         pub fn init(alloc: Allocator, hashes: []u64) !Self {
-            const bytes = try alloc.alignedAlloc(u8, BLOCK_SIZE, bits_per_key * hashes.len);
+            const bytes = try alloc.alignedAlloc(u8, BLOCK_SIZE, (bits_per_key * hashes.len + 7) / 8);
 
             for (hashes) |h| {
                 filter_insert(bytes, @truncate(h));
@@ -105,6 +105,10 @@ pub fn Filter(comptime bits_per_key: comptime_int) type {
 
         pub fn check(self: *const Self, hash: u64) bool {
             return filter_check(self.data, @truncate(hash));
+        }
+
+        pub fn mem_usage(self: *const Self) usize {
+            return self.data.len;
         }
     };
 }
