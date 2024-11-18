@@ -11,6 +11,11 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
+    const huge_alloc = b.dependency("huge_alloc", .{
+        .target = target,
+        .optimize = optimize,
+    });
+
     const bench = b.addExecutable(.{
         .name = "bench",
         .root_source_file = b.path("src/bench.zig"),
@@ -18,6 +23,7 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
     bench.root_module.addImport("filterz", filterz_module);
+    bench.root_module.addImport("huge_alloc", huge_alloc.module("huge_alloc"));
 
     const run_cmd = b.addRunArtifact(bench);
 

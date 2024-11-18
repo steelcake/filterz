@@ -8,11 +8,16 @@ const xorf = filterz.xorf;
 const sbbf = filterz.sbbf;
 const ribbon = filterz.ribbon;
 const hash_addr = std.hash.XxHash3.hash;
+const huge_alloc = @import("huge_alloc");
+const HugePageAlloc = huge_alloc.HugePageAlloc;
 
 const Address = [20]u8;
 
 pub fn main() !void {
-    const alloc = std.heap.page_allocator;
+    var ha_alloc = HugePageAlloc.init(.{ .budget_log2 = 40 });
+    defer ha_alloc.deinit();
+
+    const alloc = ha_alloc.allocator();
 
     const indices = try read_file(alloc, "bench-data/addr.index");
     defer alloc.free(indices);
