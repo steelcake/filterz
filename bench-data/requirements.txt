@@ -1,0 +1,2 @@
+hypersync===0.8.3 
+pyarrow===18.0.0
