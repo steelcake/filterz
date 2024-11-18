@@ -9,10 +9,10 @@ const Address = [20]u8;
 pub fn main() !void {
     const alloc = std.heap.page_allocator;
 
-    const indices = try read_file(alloc, "addr.index");
+    const indices = try read_file(alloc, "bench-data/addr.index");
     defer alloc.free(indices);
 
-    const raw_addrs = try read_file(alloc, "addr.data");
+    const raw_addrs = try read_file(alloc, "bench-data/addr.data");
     defer alloc.free(raw_addrs);
 
     const addrs: []const Address = @as([*]Address, @ptrCast(raw_addrs.ptr))[0 .. raw_addrs.len / 20];
