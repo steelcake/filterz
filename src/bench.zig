@@ -98,9 +98,22 @@ const BenchStats = struct {
 };
 
 fn run_bench(comptime Filter: type, alloc: Allocator, sections: [][]const Address, query_hashes: []u64) !BenchStats {
+    const hash_sections = try alloc.alloc([]u64, sections.len);
+    defer alloc.free(hash_sections);
+
+    for (sections, 0..) |section, i| {
+        var len: usize = 0;
+        const hashes = try hash_section(alloc, section, &len);
+        hash_sections[i] = hashes[0..len];
+    }
+
+    defer for (hash_sections, 0..) |s, i| {
+        alloc.free(s.ptr[0..sections[i].len]);
+    };
+
     var timer = try Timer.start();
 
-    const filters = try build_filters(Filter, alloc, sections);
+    const filters = try build_filters(Filter, alloc, hash_sections);
     defer alloc.free(filters);
     defer for (filters) |f| {
         f.deinit();
@@ -127,15 +140,11 @@ fn run_bench(comptime Filter: type, alloc: Allocator, sections: [][]const Addres
     return stats;
 }
 
-fn build_filters(comptime Filter: type, alloc: Allocator, sections: [][]const Address) ![]Filter {
-    const filters = try alloc.alloc(Filter, sections.len);
+fn build_filters(comptime Filter: type, alloc: Allocator, hash_sections: [][]u64) ![]Filter {
+    const filters = try alloc.alloc(Filter, hash_sections.len);
     errdefer alloc.free(filters);
-    for (sections, 0..) |section, i| {
-        var len: usize = 0;
-        const hashes = try hash_section(alloc, section, &len);
-        defer alloc.free(hashes);
-
-        const filter = try build_filter(Filter, alloc, hashes[0..len]);
+    for (hash_sections, 0..) |section, i| {
+        const filter = try build_filter(Filter, alloc, section);
         filters[i] = filter;
     }
 
