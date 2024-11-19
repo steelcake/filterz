@@ -59,44 +59,6 @@ pub const ConstructError = error{
     ConstructFail,
 };
 
-fn calculate_segment_length_impl(size: u32, logdiv: f64, diff: f64) u32 {
-    const float_size: f64 = @floatFromInt(size);
-    const logres = @log(float_size) / @log(logdiv) + diff;
-    const floored = @floor(logres);
-    const int_val: u32 = @intFromFloat(floored);
-    return math.shl(u32, 1, int_val);
-}
-
-fn calculate_segment_length(comptime arity: comptime_int, size: u32) u32 {
-    switch (arity) {
-        3 => {
-            return calculate_segment_length_impl(size, 3.33, 2.25);
-        },
-        4 => {
-            return calculate_segment_length_impl(size, 2.91, -0.5);
-        },
-        else => {
-            @compileError("arity is not supported");
-        },
-    }
-}
-
-fn calculate_size_factor(comptime arity: comptime_int, size: u32) f64 {
-    const sz = @max(size, 2);
-
-    switch (arity) {
-        3 => {
-            return @max(1.125, 0.875 + 0.25 * @log(1000000.0) / @log(@as(f64, @floatFromInt(sz))));
-        },
-        4 => {
-            return @max(1.075, 0.77 + 0.305 * @log(600000.0) / @log(@as(f64, @floatFromInt(size))));
-        },
-        else => {
-            @compileError("arity is not supported");
-        },
-    }
-}
-
 fn next_power_of_two(comptime T: type, val: T) T {
     return std.math.shl(T, 1, (@typeInfo(T).int.bits - @clz(val -% @as(T, 1))));
 }
@@ -114,41 +76,41 @@ pub fn filter_construct(comptime Fingerprint: type, comptime arity: comptime_int
     const NUM_TRIES = [_]usize{ 2, 4, 8, 16, 32 };
     for (MULTIPLIERS, NUM_TRIES) |multiplier, num_tries| {
         const size: u32 = @intCast(calculate_size(hashes.len, multiplier));
+        const wanted_segment_len: u32 = @intCast(@min(256 * num_tries, 2048));
+        const num_segments: u32 = @max(arity, (size + wanted_segment_len - 1) / wanted_segment_len);
+        const segment_length: u32 = next_power_of_two(u32, size / num_segments);
+        const segment_count_len: u32 = segment_length * num_segments;
+        const array_len = segment_length * (num_segments + arity - 1);
+
+        header.* = Header{
+            .segment_count_len = segment_count_len,
+            .segment_len = segment_length,
+            .seed = 0,
+        };
+
+        var fingerprints = try alloc.alloc(Fingerprint, array_len);
+        errdefer alloc.free(fingerprints);
+
+        @memset(fingerprints, 0);
+
+        var set_xormask = try alloc.alloc(u64, array_len);
+        defer alloc.free(set_xormask);
+
+        var set_count = try alloc.alloc(u32, array_len);
+        defer alloc.free(set_count);
+
+        var queue = try alloc.alloc(u32, array_len);
+        defer alloc.free(queue);
+
+        var stack_h = try alloc.alloc(u64, array_len);
+        defer alloc.free(stack_h);
+
+        var stack_hi = try alloc.alloc(u8, array_len);
+        defer alloc.free(stack_hi);
+
+        var rand = SplitMix64.init(seed.*);
 
         for (0..num_tries) |_| {
-            const num_segments: u32 = @max(arity, next_multiple_of(u32, (size + 4095) / 4096, arity));
-            const segment_length: u32 = next_power_of_two(u32, size / num_segments);
-            const segment_count_len: u32 = segment_length * num_segments;
-            const array_len = segment_length * (num_segments + arity - 1);
-
-            header.* = Header{
-                .segment_count_len = segment_count_len,
-                .segment_len = segment_length,
-                .seed = 0,
-            };
-
-            var fingerprints = try alloc.alloc(Fingerprint, array_len);
-            errdefer alloc.free(fingerprints);
-
-            @memset(fingerprints, 0);
-
-            var set_xormask = try alloc.alloc(u64, array_len);
-            defer alloc.free(set_xormask);
-
-            var set_count = try alloc.alloc(u32, array_len);
-            defer alloc.free(set_count);
-
-            var queue = try alloc.alloc(u32, array_len);
-            defer alloc.free(queue);
-
-            var stack_h = try alloc.alloc(u64, array_len);
-            defer alloc.free(stack_h);
-
-            var stack_hi = try alloc.alloc(u8, array_len);
-            defer alloc.free(stack_hi);
-
-            var rand = SplitMix64.init(seed.*);
-
             const next_seed = rand.next();
             header.seed = next_seed;
             seed.* = next_seed;
