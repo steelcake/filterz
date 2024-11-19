@@ -54,8 +54,6 @@ pub fn filter_check(comptime Fingerprint: type, comptime arity: comptime_int, he
     return f == 0;
 }
 
-const NUM_TRIES = 100;
-
 pub const ConstructError = error{
     OutOfMemory,
     ConstructFail,
@@ -99,116 +97,128 @@ fn calculate_size_factor(comptime arity: comptime_int, size: u32) f64 {
     }
 }
 
+fn next_power_of_two(comptime T: type, val: T) T {
+    return std.math.shl(T, 1, (@typeInfo(T).int.bits - @clz(val -% @as(T, 1))));
+}
+
+fn calculate_size(num_hashes: usize, multiplier: usize) usize {
+    return (num_hashes * multiplier + 99) / 100;
+}
+
+fn next_multiple_of(comptime T: type, a: T, b: T) T {
+    return (a + b - 1) / b * b;
+}
+
 pub fn filter_construct(comptime Fingerprint: type, comptime arity: comptime_int, alloc: Allocator, hashes: []u64, seed: *u64, header: *Header) ConstructError![]Fingerprint {
-    const size: u32 = @intCast(hashes.len);
-    const segment_length = @min(1 << 18, calculate_segment_length(arity, size));
-    const size_factor = calculate_size_factor(arity, size);
-    const capacity: u32 = @intFromFloat(@as(f64, @floatFromInt(size)) * size_factor);
-    var segment_count = (capacity + segment_length - 1) / segment_length - (arity - 1);
-    var array_len = (segment_count + arity - 1) * segment_length;
-    segment_count = (array_len + segment_length - 1) / segment_length;
-    segment_count = if (segment_count <= arity - 1) 1 else segment_count - (arity - 1);
-    array_len = (segment_count + arity - 1) * segment_length;
-    const segment_count_len = segment_count * segment_length;
+    const MULTIPLIERS = [_]usize{ 104, 108, 116, 120, 124 };
+    const NUM_TRIES = [_]usize{ 2, 4, 8, 16, 32 };
+    for (MULTIPLIERS, NUM_TRIES) |multiplier, num_tries| {
+        const size: u32 = @intCast(calculate_size(hashes.len, multiplier));
 
-    header.* = Header{
-        .segment_count_len = segment_count_len,
-        .segment_len = segment_length,
-        .seed = 0,
-    };
+        for (0..num_tries) |_| {
+            const num_segments: u32 = @max(arity, next_multiple_of(u32, (size + 4095) / 4096, arity));
+            const segment_length: u32 = next_power_of_two(u32, size / num_segments);
+            const segment_count_len: u32 = segment_length * num_segments;
+            const array_len = segment_length * (num_segments + arity - 1);
 
-    var fingerprints = try alloc.alloc(Fingerprint, array_len);
-    errdefer alloc.free(fingerprints);
+            header.* = Header{
+                .segment_count_len = segment_count_len,
+                .segment_len = segment_length,
+                .seed = 0,
+            };
 
-    @memset(fingerprints, 0);
+            var fingerprints = try alloc.alloc(Fingerprint, array_len);
+            errdefer alloc.free(fingerprints);
 
-    var set_xormask = try alloc.alloc(u64, array_len);
-    defer alloc.free(set_xormask);
+            @memset(fingerprints, 0);
 
-    var set_count = try alloc.alloc(u32, array_len);
-    defer alloc.free(set_count);
+            var set_xormask = try alloc.alloc(u64, array_len);
+            defer alloc.free(set_xormask);
 
-    var queue = try alloc.alloc(u32, array_len);
-    defer alloc.free(queue);
+            var set_count = try alloc.alloc(u32, array_len);
+            defer alloc.free(set_count);
 
-    var stack_h = try alloc.alloc(u64, array_len);
-    defer alloc.free(stack_h);
+            var queue = try alloc.alloc(u32, array_len);
+            defer alloc.free(queue);
 
-    var stack_hi = try alloc.alloc(u8, array_len);
-    defer alloc.free(stack_hi);
+            var stack_h = try alloc.alloc(u64, array_len);
+            defer alloc.free(stack_h);
 
-    var rand = SplitMix64.init(seed.*);
+            var stack_hi = try alloc.alloc(u8, array_len);
+            defer alloc.free(stack_hi);
 
-    for (0..NUM_TRIES) |_| {
-        const next_seed = rand.next();
-        header.seed = next_seed;
-        seed.* = next_seed;
+            var rand = SplitMix64.init(seed.*);
 
-        var stack_len: u32 = 0;
-        var queue_len: u32 = 0;
+            const next_seed = rand.next();
+            header.seed = next_seed;
+            seed.* = next_seed;
 
-        @memset(set_xormask, 0);
-        @memset(set_count, 0);
+            var stack_len: u32 = 0;
+            var queue_len: u32 = 0;
 
-        for (hashes) |hash| {
-            const h = hash ^ next_seed;
-            const subhashes = make_subhashes(arity, header, h);
-            for (subhashes) |subh| {
-                set_xormask[subh] ^= h;
-                set_count[subh] += 1;
-            }
-        }
+            @memset(set_xormask, 0);
+            @memset(set_count, 0);
 
-        for (set_count, 0..) |count, i| {
-            if (count == 1) {
-                queue[queue_len] = @intCast(i);
-                queue_len += 1;
-            }
-        }
-
-        while (queue_len > 0) {
-            queue_len -= 1;
-            const i = queue[queue_len];
-            if (set_count[i] == 1) {
-                const h = set_xormask[i];
+            for (hashes) |hash| {
+                const h = hash ^ next_seed;
                 const subhashes = make_subhashes(arity, header, h);
-                stack_h[stack_len] = h;
-                inline for (subhashes, 0..) |subh, hi| {
+                for (subhashes) |subh| {
                     set_xormask[subh] ^= h;
-                    set_count[subh] -= 1;
-                    if (subh == i) {
-                        stack_hi[stack_len] = hi;
-                    } else if (set_count[subh] == 1) {
-                        queue[queue_len] = subh;
-                        queue_len += 1;
+                    set_count[subh] += 1;
+                }
+            }
+
+            for (set_count, 0..) |count, i| {
+                if (count == 1) {
+                    queue[queue_len] = @intCast(i);
+                    queue_len += 1;
+                }
+            }
+
+            while (queue_len > 0) {
+                queue_len -= 1;
+                const i = queue[queue_len];
+                if (set_count[i] == 1) {
+                    const h = set_xormask[i];
+                    const subhashes = make_subhashes(arity, header, h);
+                    stack_h[stack_len] = h;
+                    inline for (subhashes, 0..) |subh, hi| {
+                        set_xormask[subh] ^= h;
+                        set_count[subh] -= 1;
+                        if (subh == i) {
+                            stack_hi[stack_len] = hi;
+                        } else if (set_count[subh] == 1) {
+                            queue[queue_len] = subh;
+                            queue_len += 1;
+                        }
+                    }
+                    stack_len += 1;
+                }
+            }
+
+            if (stack_len < hashes.len) {
+                continue;
+            }
+
+            while (stack_len > 0) {
+                stack_len -= 1;
+                const h = stack_h[stack_len];
+                const hi = stack_hi[stack_len];
+                const subhashes = make_subhashes(arity, header, h);
+                var f = make_fingerprint(Fingerprint, h);
+                var to_change: u32 = undefined;
+                inline for (subhashes, 0..) |subh, shi| {
+                    if (shi == hi) {
+                        to_change = subh;
+                    } else {
+                        f ^= fingerprints[subh];
                     }
                 }
-                stack_len += 1;
+                fingerprints[to_change] = f;
             }
-        }
 
-        if (stack_len < hashes.len) {
-            continue;
+            return fingerprints;
         }
-
-        while (stack_len > 0) {
-            stack_len -= 1;
-            const h = stack_h[stack_len];
-            const hi = stack_hi[stack_len];
-            const subhashes = make_subhashes(arity, header, h);
-            var f = make_fingerprint(Fingerprint, h);
-            var to_change: u32 = undefined;
-            inline for (subhashes, 0..) |subh, shi| {
-                if (shi == hi) {
-                    to_change = subh;
-                } else {
-                    f ^= fingerprints[subh];
-                }
-            }
-            fingerprints[to_change] = f;
-        }
-
-        return fingerprints;
     }
 
     return ConstructError.ConstructFail;

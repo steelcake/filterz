@@ -7,11 +7,19 @@ const Timer = std.time.Timer;
 const xorf = filterz.xorf;
 const sbbf = filterz.sbbf;
 const ribbon = filterz.ribbon;
-const hash_addr = std.hash.XxHash3.hash;
 const huge_alloc = @import("huge_alloc");
 const HugePageAlloc = huge_alloc.HugePageAlloc;
 
 const Address = [20]u8;
+
+fn hash_addr(seed: u64, addr: []const u8) u64 {
+    var acc: u64 = seed;
+    for (0..addr.len / 8) |i| {
+        const offset = i * 8;
+        acc ^= std.mem.readInt(u64, @ptrCast(addr[offset .. offset + 8]), .little);
+    }
+    return acc;
+}
 
 pub fn main() !void {
     var ha_alloc = HugePageAlloc.init(.{ .budget_log2 = 40 });
@@ -57,7 +65,7 @@ pub fn main() !void {
         if (addr.len != 20) {
             @panic("bad address");
         }
-        const hash = hash_addr(0, addr);
+        const hash = hash_addr(67, addr);
         try query_hashes.append(hash);
     }
 
@@ -71,23 +79,27 @@ pub fn main() !void {
 const FILTERS = [_]type{
     sbbf.Filter(16),
     sbbf.Filter(18),
-    //xorf.Filter(u16, 4),
-    //xorf.Filter(u16, 3),
+    xorf.Filter(u16, 4),
+    xorf.Filter(u16, 3),
     ribbon.Filter(u16),
     sbbf.Filter(8),
     sbbf.Filter(9),
     ribbon.Filter(u8),
+    xorf.Filter(u8, 4),
+    xorf.Filter(u8, 3),
 };
 
 const FILTER_NAMES = [_][]const u8{
     "sbbf16",
     "sbbf18",
-    //"xorf4",
-    //"xorf3",
+    "xorf4",
+    "xorf3",
     "ribbon",
     "sbbf8",
     "sbbf9",
     "ribbon8",
+    "xorf4_8",
+    "xorf3_8",
 };
 
 const BenchStats = struct {
@@ -163,7 +175,7 @@ fn hash_section(alloc: Allocator, section: []const Address, len: *usize) ![]u64 
     errdefer alloc.free(hashes);
 
     for (0..section.len) |i| {
-        hashes[i] = hash_addr(0, &section[i]);
+        hashes[i] = hash_addr(67, &section[i]);
     }
 
     std.sort.pdq(u64, hashes, {}, std.sort.asc(u64));
