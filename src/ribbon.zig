@@ -35,7 +35,7 @@ fn calculate_result_row(comptime ResultRow: type, seed: u64, hash: u64) ResultRo
     return @truncate((h >> 32) ^ h);
 }
 
-pub fn construct(comptime ResultRow: type, alloc: Allocator, hashes: []u64, seed: *u64) ConstructError![]ResultRow {
+pub fn construct(comptime ResultRow: type, alloc: Allocator, hashes: []u64, seed: *u64) ConstructError![]align(32) ResultRow {
     const MIN_MULTIPLIER = 101; // 1% space overhead
     const MAX_MULTIPLIER = 108; // 8% space overhead
 
@@ -91,7 +91,7 @@ pub fn construct(comptime ResultRow: type, alloc: Allocator, hashes: []u64, seed
 
             seed.* = new_seed;
 
-            const solution_matrix = try alloc.alloc(ResultRow, size);
+            const solution_matrix = try alloc.alignedAlloc(ResultRow, 32, size);
 
             const result_bits = @typeInfo(ResultRow).int.bits;
 
@@ -124,7 +124,7 @@ pub fn construct(comptime ResultRow: type, alloc: Allocator, hashes: []u64, seed
     return ConstructError.Fail;
 }
 
-fn check_filter(comptime ResultRow: type, solution_matrix: []ResultRow, seed: u64, hash: u64) bool {
+fn check_filter(comptime ResultRow: type, solution_matrix: []align(32) ResultRow, seed: u64, hash: u64) bool {
     const start_range: u32 = @intCast(solution_matrix.len + 1 - 128);
     const start_pos = calculate_start_pos(seed, start_range, hash);
     const coeff_row = calculate_coeff_row(seed, hash);
@@ -148,7 +148,7 @@ pub fn Filter(comptime ResultRow: type) type {
         const Self = @This();
 
         seed: u64,
-        solution_matrix: []ResultRow,
+        solution_matrix: []align(32) ResultRow,
         alloc: Allocator,
 
         pub fn init(alloc: Allocator, hashes: []u64) !Self {

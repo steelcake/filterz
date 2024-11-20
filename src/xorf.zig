@@ -71,44 +71,56 @@ fn next_multiple_of(comptime T: type, a: T, b: T) T {
     return (a + b - 1) / b * b;
 }
 
+fn calculate_header(comptime arity: comptime_int, num_hashes: usize, multiplier: usize, num_tries: usize) Header {
+    const size: u32 = @intCast(calculate_size(num_hashes, multiplier));
+    const wanted_segment_len: u32 = @intCast(@min(256 * num_tries, 2048));
+    const num_segments: u32 = @max(arity, (size + wanted_segment_len - 1) / wanted_segment_len);
+    const segment_length: u32 = next_power_of_two(u32, size / num_segments);
+    const segment_count_len: u32 = segment_length * num_segments;
+
+    return Header{
+        .segment_count_len = segment_count_len,
+        .segment_len = segment_length,
+        .seed = 0,
+    };
+}
+
+fn calculate_array_len(comptime arity: comptime_int, header: Header) u32 {
+    return header.segment_len * ((header.segment_count_len / header.segment_len) + arity - 1);
+}
+
 pub fn filter_construct(comptime Fingerprint: type, comptime arity: comptime_int, alloc: Allocator, hashes: []u64, seed: *u64, header: *Header) ConstructError![]Fingerprint {
     const MULTIPLIERS = [_]usize{ 104, 108, 116, 120, 124 };
     const NUM_TRIES = [_]usize{ 2, 4, 8, 16, 32 };
+
+    const max_header = calculate_header(arity, hashes.len, MULTIPLIERS[MULTIPLIERS.len - 1], NUM_TRIES[NUM_TRIES.len - 1]);
+    const max_array_len = calculate_array_len(arity, max_header);
+
+    var set_xormask_storage = try alloc.alloc(u64, max_array_len);
+    defer alloc.free(set_xormask_storage);
+
+    var set_count_storage = try alloc.alloc(u32, max_array_len);
+    defer alloc.free(set_count_storage);
+
+    var queue_storage = try alloc.alloc(u32, max_array_len);
+    defer alloc.free(queue_storage);
+
+    var stack_h_storage = try alloc.alloc(u64, max_array_len);
+    defer alloc.free(stack_h_storage);
+
+    var stack_hi_storage = try alloc.alloc(u8, max_array_len);
+    defer alloc.free(stack_hi_storage);
+
     for (MULTIPLIERS, NUM_TRIES) |multiplier, num_tries| {
-        const size: u32 = @intCast(calculate_size(hashes.len, multiplier));
-        const wanted_segment_len: u32 = @intCast(@min(256 * num_tries, 2048));
-        const num_segments: u32 = @max(arity, (size + wanted_segment_len - 1) / wanted_segment_len);
-        const segment_length: u32 = next_power_of_two(u32, size / num_segments);
-        const segment_count_len: u32 = segment_length * num_segments;
-        const array_len = segment_length * (num_segments + arity - 1);
-
-        header.* = Header{
-            .segment_count_len = segment_count_len,
-            .segment_len = segment_length,
-            .seed = 0,
-        };
-
-        var fingerprints = try alloc.alloc(Fingerprint, array_len);
-        errdefer alloc.free(fingerprints);
-
-        @memset(fingerprints, 0);
-
-        var set_xormask = try alloc.alloc(u64, array_len);
-        defer alloc.free(set_xormask);
-
-        var set_count = try alloc.alloc(u32, array_len);
-        defer alloc.free(set_count);
-
-        var queue = try alloc.alloc(u32, array_len);
-        defer alloc.free(queue);
-
-        var stack_h = try alloc.alloc(u64, array_len);
-        defer alloc.free(stack_h);
-
-        var stack_hi = try alloc.alloc(u8, array_len);
-        defer alloc.free(stack_hi);
-
+        header.* = calculate_header(arity, hashes.len, multiplier, num_tries);
+        const array_len = calculate_array_len(arity, header.*);
         var rand = SplitMix64.init(seed.*);
+
+        const set_xormask = set_xormask_storage[0..array_len];
+        const set_count = set_count_storage[0..array_len];
+        const queue = queue_storage[0..array_len];
+        const stack_h = stack_h_storage[0..array_len];
+        const stack_hi = stack_hi_storage[0..array_len];
 
         for (0..num_tries) |_| {
             const next_seed = rand.next();
@@ -161,6 +173,9 @@ pub fn filter_construct(comptime Fingerprint: type, comptime arity: comptime_int
             if (stack_len < hashes.len) {
                 continue;
             }
+
+            const fingerprints = try alloc.alloc(Fingerprint, array_len);
+            @memset(fingerprints, 0);
 
             while (stack_len > 0) {
                 stack_len -= 1;
