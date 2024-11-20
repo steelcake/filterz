@@ -130,13 +130,35 @@ fn check_filter(comptime ResultRow: type, solution_matrix: []align(32) ResultRow
     const coeff_row = calculate_coeff_row(seed, hash);
     const expected_result_row = calculate_result_row(ResultRow, seed, hash);
 
-    var result_row: ResultRow = 0;
-    for (0..128) |i| {
-        const rr: ResultRow = @truncate(std.math.shr(u128, coeff_row, i));
-        result_row ^= solution_matrix[start_pos + i] & (0 -% (rr & 1));
+    const num_rows_per_vec = @divExact(256, @typeInfo(ResultRow).int.bits);
+    const num_vecs = @divExact(128, num_rows_per_vec);
+
+    const Vec = @Vector(num_rows_per_vec, ResultRow);
+
+    var result_rows: Vec = @splat(0);
+
+    var data: [128]ResultRow align(32) = undefined;
+    @memcpy(data[0..], solution_matrix[start_pos .. start_pos + 128]);
+
+    const sol_matrix_v = @as([*]Vec, @ptrCast(&data))[0..num_vecs];
+
+    for (0..num_vecs) |i| {
+        const idx = i * num_rows_per_vec;
+
+        var rr: Vec = undefined;
+        for (0..num_rows_per_vec) |j| {
+            rr[j] = @truncate(std.math.shr(u128, coeff_row, idx + j));
+        }
+
+        const sol_v = sol_matrix_v[i];
+
+        const zeroes: Vec = @splat(0);
+        const ones: Vec = @splat(1);
+
+        result_rows ^= sol_v & (zeroes -% (rr & ones));
     }
 
-    return expected_result_row == result_row;
+    return expected_result_row == @reduce(.Xor, result_rows);
 }
 
 fn bit_parity(val: u128) u8 {
