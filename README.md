@@ -10,4 +10,4 @@ Requires Zig 0.14.0-dev release.
 make benchmark
 ```
 
-[Example results] (bench_result_low_hit.txt)
+[Example results](./bench_result_low_hit.txt)
