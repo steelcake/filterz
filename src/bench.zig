@@ -9,17 +9,9 @@ const sbbf = filterz.sbbf;
 const ribbon = filterz.ribbon;
 const huge_alloc = @import("huge_alloc");
 const HugePageAlloc = huge_alloc.HugePageAlloc;
+const hash_addr = std.hash.XxHash64.hash;
 
 const Address = [20]u8;
-
-fn hash_addr(seed: u64, addr: []const u8) u64 {
-    var acc: u64 = seed;
-    for (0..addr.len / 8) |i| {
-        const offset = i * 8;
-        acc ^= std.mem.readInt(u64, @ptrCast(addr[offset .. offset + 8]), .little);
-    }
-    return acc;
-}
 
 pub fn main() !void {
     var ha_alloc = HugePageAlloc.init(.{ .budget_log2 = 40 });
@@ -78,6 +70,7 @@ pub fn main() !void {
 
 const FILTERS = [_]type{
     ribbon.Filter(u4),
+    ribbon.Filter(u5),
     xorf.Filter(u4, 3),
     xorf.Filter(u4, 4),
     sbbf.Filter(16),
@@ -96,6 +89,7 @@ const FILTERS = [_]type{
 
 const FILTER_NAMES = [_][]const u8{
     "ribbon4",
+    "ribbon5",
     "xorf4_3",
     "xorf4_4",
     "sbbf16",
