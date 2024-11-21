@@ -4,17 +4,18 @@ import asyncio
 
 DATA_FILE_PATH = "addr.data"
 INDEX_FILE_PATH = "addr.index"
-TOTAL_TX = 250000000
+TOTAL_TX = 100000000123123
 TX_PER_SECTION = 100000
 
 async def main():
     client = hypersync.HypersyncClient(ClientConfig())
     query = Query(
-        from_block=18123123,
+        from_block=0,
         transactions=[TransactionSelection()],
         field_selection=FieldSelection(
             transaction=[
                 TransactionField.FROM,
+                TransactionField.TO,
             ]
         ),
     )
@@ -38,7 +39,12 @@ async def main():
         for addr in res.data.transactions.column('from'):
             num_tx += 1
             total_num_tx += 1
-            if addr is not None:
+            if addr is not None and addr.is_valid:
+                num_addrs += 1
+                data_file.write(addr.as_buffer())
+
+        for addr in res.data.transactions.column('to'):
+            if addr is not None and addr.is_valid:
                 num_addrs += 1
                 data_file.write(addr.as_buffer())
 
