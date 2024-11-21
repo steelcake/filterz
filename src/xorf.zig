@@ -73,7 +73,7 @@ fn next_multiple_of(comptime T: type, a: T, b: T) T {
 
 fn calculate_header(comptime arity: comptime_int, num_hashes: usize, multiplier: usize, num_tries: usize) Header {
     const size: u32 = @intCast(calculate_size(num_hashes, multiplier));
-    const wanted_segment_len: u32 = @intCast(@min(256 * num_tries, 2048));
+    const wanted_segment_len: u32 = @intCast(@min(256 * num_tries, 8192));
     const num_segments: u32 = @max(arity, (size + wanted_segment_len - 1) / wanted_segment_len);
     const segment_length: u32 = next_power_of_two(u32, size / num_segments);
     const segment_count_len: u32 = segment_length * num_segments;
@@ -90,8 +90,8 @@ fn calculate_array_len(comptime arity: comptime_int, header: Header) u32 {
 }
 
 pub fn filter_construct(comptime Fingerprint: type, comptime arity: comptime_int, alloc: Allocator, hashes: []u64, seed: *u64, header: *Header) ConstructError![]Fingerprint {
-    const MULTIPLIERS = [_]usize{ 104, 108, 116, 120, 124 };
-    const NUM_TRIES = [_]usize{ 2, 4, 8, 16, 32 };
+    const MULTIPLIERS = [_]usize{ 104, 108, 116, 120, 124, 130 };
+    const NUM_TRIES = [_]usize{ 2, 4, 8, 16, 32, 32 };
 
     const max_header = calculate_header(arity, hashes.len, MULTIPLIERS[MULTIPLIERS.len - 1], NUM_TRIES[NUM_TRIES.len - 1]);
     const max_array_len = calculate_array_len(arity, max_header);

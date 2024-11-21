@@ -14,16 +14,20 @@ const hash_addr = std.hash.XxHash64.hash;
 const Address = [20]u8;
 
 pub fn main() !void {
-    var ha_alloc = HugePageAlloc.init(.{ .budget_log2 = 40 });
+    var ha_alloc = HugePageAlloc.init(.{ .budget_log2 = 34 });
     defer ha_alloc.deinit();
 
     const alloc = ha_alloc.allocator();
 
-    const indices = try read_file(alloc, "bench-data/addr.index");
+    const indices = try read_file(alloc, "bench-data/addr.index", null);
     defer alloc.free(indices);
 
-    const raw_addrs = try read_file(alloc, "bench-data/addr.data");
+    std.debug.print("read addrs\n", .{});
+
+    const raw_addrs = try read_file(alloc, "bench-data/addr.data", 10 * 1024 * 1024 * 1024);
     defer alloc.free(raw_addrs);
+
+    std.debug.print("finished reading addrs\n", .{});
 
     const addrs: []const Address = @as([*]Address, @ptrCast(raw_addrs.ptr))[0 .. raw_addrs.len / 20];
 
@@ -32,6 +36,8 @@ pub fn main() !void {
 
     var sections = ArrayList([]const Address).init(alloc);
     defer sections.deinit();
+
+    std.debug.print("parsing sections\n", .{});
 
     while (index_iter.next()) |index| {
         const idx = try std.fmt.parseInt(usize, index, 10);
@@ -213,12 +219,15 @@ fn print_hex(alloc: Allocator, addr: Address) !void {
     std.debug.print("{s}\n", .{list.items});
 }
 
-fn read_file(alloc: Allocator, path: []const u8) ![]u8 {
+fn read_file(alloc: Allocator, path: []const u8, size_hint: ?usize) ![]u8 {
     const file = try std.fs.cwd().openFile(path, .{});
     defer file.close();
 
-    return try file.readToEndAlloc(
+    return try file.readToEndAllocOptions(
         alloc,
         std.math.maxInt(usize),
+        size_hint,
+        64,
+        null,
     );
 }

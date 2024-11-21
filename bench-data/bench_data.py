@@ -4,13 +4,13 @@ import asyncio
 
 DATA_FILE_PATH = "addr.data"
 INDEX_FILE_PATH = "addr.index"
-TOTAL_TX = 100000000123123
+TOTAL_TX = 250123123
 TX_PER_SECTION = 100000
 
 async def main():
     client = hypersync.HypersyncClient(ClientConfig())
     query = Query(
-        from_block=0,
+        from_block=16123123,
         transactions=[TransactionSelection()],
         field_selection=FieldSelection(
             transaction=[
@@ -55,6 +55,8 @@ async def main():
             index_file.write(' ' + str(num_addrs))
             num_addrs = 0
             num_tx = 0
+
+        print("processed up to block " + str(res.next_block) + "\n")
 
     data_file.close()
     index_file.close()
