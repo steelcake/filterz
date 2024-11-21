@@ -37,6 +37,8 @@ As described in https://arxiv.org/abs/2103.02515
 Solution matrix layout can be improved as described in `Some things that can be improved` section.
 Also a nicer api for dynamic `bits-per-key` would be nice so user can lower bits-per-key while the program is running to control memory usage.
 
+The implementation corresponds to the standard ribbon filter with smash in the paper.
+
 ## Benchmarks
 
 1. Download Benchmark Data - instructions [here](bench-data/README.md)
