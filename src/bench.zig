@@ -100,16 +100,16 @@ const FILTER_NAMES = [_][]const u8{
     "xorf4_4",
     "sbbf16",
     "sbbf18",
-    "xorf4",
-    "xorf3",
-    "ribbon",
+    "xorf16_4",
+    "xorf16_3",
+    "ribbon16",
     "sbbf8",
     "sbbf9",
     "ribbon8",
     "ribbon9",
     "ribbon10",
-    "xorf4_8",
-    "xorf3_8",
+    "xorf8_4",
+    "xorf8_3",
 };
 
 const BenchStats = struct {

@@ -39,7 +39,7 @@ pub fn check_prepared(comptime Fingerprint: type, comptime arity: comptime_int, 
     const h = hash ^ header.seed;
     var f = make_fingerprint(Fingerprint, h);
     inline for (subhashes) |sh| {
-        f ^= fingerprints[sh];
+        f ^= fingerprints.ptr[sh];
     }
     return f == 0;
 }
@@ -49,7 +49,7 @@ pub fn filter_check(comptime Fingerprint: type, comptime arity: comptime_int, he
     const subhashes = make_subhashes(arity, header, h);
     var f = make_fingerprint(Fingerprint, h);
     inline for (subhashes) |sh| {
-        f ^= fingerprints[sh];
+        f ^= fingerprints.ptr[sh];
     }
     return f == 0;
 }

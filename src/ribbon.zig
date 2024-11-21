@@ -18,10 +18,9 @@ const coeff_factor0: u64 = 0x876f170be4f1fcb9;
 const coeff_factor1: u64 = 0xf0433a4aecda4c5f;
 
 fn calculate_coeff_row(seed: u64, hash: u64) u128 {
-    const h = seed ^ hash;
-    const a: u128 = @as(u128, h) * @as(u128, coeff_factor0);
-    const b: u128 = @as(u128, h) * @as(u128, coeff_factor1);
-    const row = b ^ (a << 64) ^ (a >> 64);
+    const a: u128 = (seed *% coeff_factor0) ^ hash;
+    const b: u128 = (seed *% coeff_factor1) ^ hash;
+    const row = (a << 64) | b;
     return row | 1;
 }
 
@@ -168,7 +167,7 @@ fn check_filter(comptime RealResultRow: type, solution_matrix: []const RealResul
             rr[j] = @truncate(std.math.shr(u128, coeff_row, idx + j));
         }
 
-        const sol_v = sol_matrix_v[i];
+        const sol_v = sol_matrix_v.ptr[i];
 
         const zeroes: Vec = @splat(0);
         const ones: Vec = @splat(1);
