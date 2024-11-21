@@ -29,10 +29,14 @@ This will generate two files:
 ## Configuration
 
 The script is configured by default to:
-- Download 10 million transactions
+- Download ~250 million transactions
 - Process them in sections of 100,000 transactions
-- Start from block 18123123
+- Start from block 16123123
+
+This will create a 10GB file on disk and the benchmark runner loads the entire file to memory.
+This might cause OOM failure if the system doesn't have enough RAM.
 
 You can modify these parameters in the script by adjusting:
 - `TOTAL_TX`: Total number of transactions to process
 - `TX_PER_SECTION`: Number of transactions per section
+- `query.from_block`: The block to start downloading from
