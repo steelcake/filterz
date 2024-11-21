@@ -19,7 +19,7 @@ const coeff_factor1: u64 = 0xf0433a4aecda4c5f;
 
 fn calculate_coeff_row(seed: u64, hash: u64) u128 {
     const a: u128 = (seed *% coeff_factor0) ^ hash;
-    const b: u128 = (seed *% coeff_factor1) ^ hash;
+    const b: u128 = (seed *% coeff_factor1) ^ @byteSwap(hash);
     const row = (a << 64) | b;
     return row | 1;
 }
