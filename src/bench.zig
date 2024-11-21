@@ -77,6 +77,9 @@ pub fn main() !void {
 }
 
 const FILTERS = [_]type{
+    ribbon.Filter(u4),
+    xorf.Filter(u4, 3),
+    xorf.Filter(u4, 4),
     sbbf.Filter(16),
     sbbf.Filter(18),
     xorf.Filter(u16, 4),
@@ -85,11 +88,16 @@ const FILTERS = [_]type{
     sbbf.Filter(8),
     sbbf.Filter(9),
     ribbon.Filter(u8),
+    ribbon.Filter(u9),
+    ribbon.Filter(u10),
     xorf.Filter(u8, 4),
     xorf.Filter(u8, 3),
 };
 
 const FILTER_NAMES = [_][]const u8{
+    "ribbon4",
+    "xorf4_3",
+    "xorf4_4",
     "sbbf16",
     "sbbf18",
     "xorf4",
@@ -98,6 +106,8 @@ const FILTER_NAMES = [_][]const u8{
     "sbbf8",
     "sbbf9",
     "ribbon8",
+    "ribbon9",
+    "ribbon10",
     "xorf4_8",
     "xorf3_8",
 };
