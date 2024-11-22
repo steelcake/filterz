@@ -66,5 +66,5 @@ Seems like a vanilla implementation in zig goes a long way since we can use the 
 There are some ideas that improve the split block bloom filter but they don't drastically effect space efficiency which is what the implementations here are trying to optimize. Seems like these improvements are intended to make false positive rates more stable.
 Rocksdb has a very nicely commented implementation of this.
 
-Would be nice to have a structure that mixes the bloom retrieval and filtering so we have something that says the key is in the set and also gives a value that corresponds to the key. This can be very effective in cases like databases if we are skipping over sections with x elements and each section has x/y sub-sections inside.
-Then our query can say, yes your query should visit this section and it should visit subsections 0,2 and 5 instead of just saying it should visit the section.
+Would be nice to have a structure that mixes the bloom retrieval and filtering so we have something that says the key is in the set and also gives a value that corresponds to the key. This can be very effective in cases like databases if we are skipping over sections with x elements and each section has x/y elements inside.
+Then our query can say, yes your query should visit this section and it should visit subsections 0,2 and 5 instead of just saying it should visit the section. This might mean that we can further reduce IO 2x in case of a hit by just adding one bit-per-key storage overhead to our filter.
