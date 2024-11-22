@@ -59,7 +59,7 @@ Xor filter implemented here is really a BinaryFuse filter. The construction is p
 I initially implemented it same as in the original C/C++ implementations but it was failing construction, this might be due to some errors in my implementation. Also some optimizations for construction are not implemented. It would be nice to work on these.
 I am leaving it like this since the space-efficiency/false-positive-rate/query-time roughly meet the numbers given in the paper and it seems like ribbon filter is the better option.
 
-Ribbon filter uses a row-major layout with some vectorization in query. The paper says this is not the best and interleaved-column-major layout with column sizes is the best. I didn't implement this initially because it is more difficult.
+Ribbon filter uses a row-major layout with some vectorization in query. The paper says this is not the best and interleaved-column-major layout with mixed column sizes is the best. I didn't implement this initially because it is more difficult.
 Seems like a vanilla implementation in zig goes a long way since we can use the filter with fingerprint types like `u10`. It would be nice to explore implementing interleaved-column-major layout as described in the paper. Or at least supporting mixed column sizes
  to support fractional bits-per-key values would be nice to meet memory budgets more tightly.
 
