@@ -6,26 +6,32 @@ fn reduce(len: u32, x: u32) u32 {
     return @truncate((@as(u64, len) * @as(u64, x)) >> 32);
 }
 
-fn calculate_start_pos(seed: u64, n: u32, hash: u64) u32 {
+fn calculate_start_pos(comptime CoeffRow: type, seed: u64, n: u32, hash: u64) u32 {
+    const coeff_bits = @typeInfo(CoeffRow).int.bits;
+    const W = coeff_bits / 4;
     const hash0 = seed ^ hash;
     const h: u32 = @truncate(hash0 ^ (hash0 >> 32));
-    const smash_pos = reduce(n + 64, h);
-    const pos = smash_pos -| 32;
+    const smash_pos = reduce(n + W * 2, h);
+    const pos = smash_pos -| W;
     return @min(n - 1, pos);
 }
 
-const coeff_factor0: u64 = 0x876f170be4f1fcb9;
-const coeff_factor1: u64 = 0xf0433a4aecda4c5f;
-
-fn calculate_coeff_row(seed: u64, hash: u64) u128 {
-    const a: u128 = (seed *% coeff_factor0) ^ hash;
-    const b: u128 = (seed *% coeff_factor1) ^ @byteSwap(hash);
-    const row = (a << 64) | b;
-    return row | 1;
+fn calculate_coeff_row(comptime CoeffRow: type, seed0: u64, seed1: u64, hash: u64) CoeffRow {
+    if (CoeffRow == u64) {
+        return (seed0 ^ hash) | 1;
+    } else if (CoeffRow == u32) {
+        return @truncate((seed0 ^ hash) | 1);
+    } else if (CoeffRow == u128) {
+        const a: u128 = seed0 ^ hash;
+        const b: u128 = seed1 ^ @byteSwap(hash);
+        return (a << 64) | b | 1;
+    } else {
+        @compileError("unimplemented coeffrow");
+    }
 }
 
-fn calculate_size(num_hashes: usize, multiplier: usize) usize {
-    return (num_hashes * multiplier + 99) / 100 + 128 - 1;
+fn calculate_size(comptime CoeffRow: type, num_hashes: usize, multiplier: usize) usize {
+    return (num_hashes * multiplier + 99) / 100 + @typeInfo(CoeffRow).int.bits - 1;
 }
 
 const ConstructError = error{
@@ -38,35 +44,37 @@ fn calculate_result_row(comptime ResultRow: type, seed: u64, hash: u64) ResultRo
     return @truncate((h >> 32) ^ h);
 }
 
-pub fn construct(comptime ResultRow: type, alloc: Allocator, hashes: []u64, seed: *u64) ConstructError![]ResultRow {
+pub fn construct(comptime CoeffRow: type, comptime ResultRow: type, alloc: Allocator, hashes: []u64, seed0: *u64, seed1: *u64) ConstructError![]ResultRow {
     const MIN_MULTIPLIER = 101; // 1% space overhead
     const MAX_MULTIPLIER = 108; // 8% space overhead
 
-    const max_size = calculate_size(hashes.len, MAX_MULTIPLIER);
-    const coeff_matrix_storage = try alloc.alloc(u128, max_size);
+    const max_size = calculate_size(CoeffRow, hashes.len, MAX_MULTIPLIER);
+    const coeff_matrix_storage = try alloc.alloc(CoeffRow, max_size);
     defer alloc.free(coeff_matrix_storage);
     const result_matrix_storage = try alloc.alloc(ResultRow, max_size);
     defer alloc.free(result_matrix_storage);
 
-    var random = SplitMix.init(seed.*);
+    var random0 = SplitMix.init(seed0.*);
+    var random1 = SplitMix.init(seed1.*);
 
     for (MIN_MULTIPLIER..MAX_MULTIPLIER + 1) |multiplier| {
-        const size: u32 = @intCast(calculate_size(hashes.len, multiplier));
-        const start_range = size + 1 - 128;
+        const size: u32 = @intCast(calculate_size(CoeffRow, hashes.len, multiplier));
+        const start_range = size + 1 - @typeInfo(CoeffRow).int.bits;
         const num_tries = std.math.shl(usize, 1, multiplier - MIN_MULTIPLIER);
 
         const coeff_matrix = coeff_matrix_storage[0..size];
         const result_matrix = result_matrix_storage[0..size];
 
         tries: for (0..num_tries) |_| {
-            const new_seed = random.next();
+            const new_seed_0 = random0.next();
+            const new_seed_1 = random1.next();
             @memset(coeff_matrix, 0);
             @memset(result_matrix, 0);
 
             for (hashes) |hash| {
-                var start_pos = calculate_start_pos(new_seed, start_range, hash);
-                var coeff_row = calculate_coeff_row(new_seed, hash);
-                var result_row = calculate_result_row(ResultRow, new_seed, hash);
+                var start_pos = calculate_start_pos(CoeffRow, new_seed_0, start_range, hash);
+                var coeff_row = calculate_coeff_row(CoeffRow, new_seed_0, new_seed_1, hash);
+                var result_row = calculate_result_row(ResultRow, new_seed_0, hash);
 
                 while (true) {
                     const existing = coeff_matrix[start_pos];
@@ -88,17 +96,18 @@ pub fn construct(comptime ResultRow: type, alloc: Allocator, hashes: []u64, seed
                     }
                     const leading_zeroes = @ctz(coeff_row);
                     start_pos += leading_zeroes;
-                    coeff_row = std.math.shr(u128, coeff_row, leading_zeroes);
+                    coeff_row = std.math.shr(CoeffRow, coeff_row, leading_zeroes);
                 }
             }
 
-            seed.* = new_seed;
+            seed0.* = new_seed_0;
+            seed1.* = new_seed_1;
 
             const solution_matrix = try alloc.alloc(ResultRow, size);
 
             const result_bits = @typeInfo(ResultRow).int.bits;
 
-            var state: [result_bits]u128 = undefined;
+            var state: [result_bits]CoeffRow = undefined;
             @memset(state[0..result_bits], 0);
 
             var i = size;
@@ -110,9 +119,9 @@ pub fn construct(comptime ResultRow: type, alloc: Allocator, hashes: []u64, seed
                 const result_row = result_matrix[i];
 
                 for (0..result_bits) |j| {
-                    var tmp: u128 = std.math.shl(u128, state[j], 1);
-                    const bit = bit_parity(tmp & coeff_row) ^ (((std.math.shr(ResultRow, result_row, j))) & 1);
-                    tmp |= @as(u128, bit);
+                    var tmp: CoeffRow = std.math.shl(CoeffRow, state[j], 1);
+                    const bit = bit_parity(CoeffRow, tmp & coeff_row) ^ (((std.math.shr(ResultRow, result_row, j))) & 1);
+                    tmp |= @as(CoeffRow, bit);
                     state[j] = tmp;
                     solution_row |= std.math.shl(ResultRow, @as(ResultRow, @intCast(bit)), j);
                 }
@@ -127,7 +136,7 @@ pub fn construct(comptime ResultRow: type, alloc: Allocator, hashes: []u64, seed
     return ConstructError.Fail;
 }
 
-fn check_filter(comptime RealResultRow: type, solution_matrix: []const RealResultRow, seed: u64, hash: u64) bool {
+fn check_filter(comptime CoeffRow: type, comptime RealResultRow: type, solution_matrix: []const RealResultRow, seed0: u64, seed1: u64, hash: u64) bool {
     const rr_bits = @typeInfo(RealResultRow).int.bits;
     const ResultRow = if (rr_bits > 32)
         @compileError("bad result row type")
@@ -140,18 +149,20 @@ fn check_filter(comptime RealResultRow: type, solution_matrix: []const RealResul
     else
         @compileError("impossible");
 
-    const start_range: u32 = @intCast(solution_matrix.len + 1 - 128);
-    const start_pos = calculate_start_pos(seed, start_range, hash);
-    const coeff_row = calculate_coeff_row(seed, hash);
-    const expected_result_row = calculate_result_row(RealResultRow, seed, hash);
+    const coeff_bits = @typeInfo(CoeffRow).int.bits;
+
+    const start_range: u32 = @intCast(solution_matrix.len + 1 - coeff_bits);
+    const start_pos = calculate_start_pos(CoeffRow, seed0, start_range, hash);
+    const coeff_row = calculate_coeff_row(CoeffRow, seed0, seed1, hash);
+    const expected_result_row = calculate_result_row(RealResultRow, seed0, hash);
 
     const num_rows_per_vec = @divExact(256, @typeInfo(ResultRow).int.bits);
-    const num_vecs = @divExact(128, num_rows_per_vec);
+    const num_vecs = @divExact(coeff_bits, num_rows_per_vec);
 
     const Vec = @Vector(num_rows_per_vec, ResultRow);
 
-    var data: [128]ResultRow align(32) = undefined;
-    for (0..128) |i| {
+    var data: [coeff_bits]ResultRow align(64) = undefined;
+    for (0..coeff_bits) |i| {
         // use raw pointer here since compiler can't remove the bounds check
         data[i] = solution_matrix.ptr[start_pos + i];
     }
@@ -164,7 +175,7 @@ fn check_filter(comptime RealResultRow: type, solution_matrix: []const RealResul
 
         var rr: Vec = undefined;
         for (0..num_rows_per_vec) |j| {
-            rr[j] = @truncate(std.math.shr(u128, coeff_row, idx + j));
+            rr[j] = @truncate(std.math.shr(CoeffRow, coeff_row, idx + j));
         }
 
         const sol_v = sol_matrix_v.ptr[i];
@@ -178,24 +189,27 @@ fn check_filter(comptime RealResultRow: type, solution_matrix: []const RealResul
     return expected_result_row == @as(RealResultRow, @truncate(@reduce(.Xor, result_rows)));
 }
 
-fn bit_parity(val: u128) u8 {
+fn bit_parity(comptime CoeffRow: type, val: CoeffRow) u8 {
     return @popCount(val) & 1;
 }
 
-pub fn Filter(comptime ResultRow: type) type {
+pub fn Filter(comptime CoeffRow: type, comptime ResultRow: type) type {
     return struct {
         const Self = @This();
 
-        seed: u64,
+        seed0: u64,
+        seed1: u64,
         solution_matrix: []ResultRow,
         alloc: Allocator,
 
         pub fn init(alloc: Allocator, hashes: []u64) !Self {
-            var seed: u64 = 12;
-            const solution_matrix = try construct(ResultRow, alloc, hashes, &seed);
+            var seed0: u64 = 12;
+            var seed1: u64 = ~@as(u64, 69);
+            const solution_matrix = try construct(CoeffRow, ResultRow, alloc, hashes, &seed0, &seed1);
 
             return Self{
-                .seed = seed,
+                .seed0 = seed0,
+                .seed1 = seed1,
                 .solution_matrix = solution_matrix,
                 .alloc = alloc,
             };
@@ -206,7 +220,7 @@ pub fn Filter(comptime ResultRow: type) type {
         }
 
         pub fn check(self: *const Self, hash: u64) bool {
-            return check_filter(ResultRow, self.solution_matrix, self.seed, hash);
+            return check_filter(CoeffRow, ResultRow, self.solution_matrix, self.seed0, self.seed1, hash);
         }
 
         pub fn mem_usage(self: *const Self) usize {

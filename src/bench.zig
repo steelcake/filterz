@@ -7,17 +7,40 @@ const Timer = std.time.Timer;
 const xorf = filterz.xorf;
 const sbbf = filterz.sbbf;
 const ribbon = filterz.ribbon;
-const huge_alloc = @import("huge_alloc");
-const HugePageAlloc = huge_alloc.HugePageAlloc;
-const hash_addr = std.hash.XxHash64.hash;
+// const huge_alloc = @import("huge_alloc");
+// const HugePageAlloc = huge_alloc.HugePageAlloc;
+// const hash_addr = std.hash.XxHash64.hash;
+//
+
+fn hash_addr(seed: u64, addr: []const u8) u64 {
+    var hash: [8]u8 align(8) = @bitCast(seed);
+
+    for (0..20) |i| {
+        hash[i % 8] ^= addr[i];
+    }
+
+    // for (0..2) |i| {
+    //     const ptr: *const u64 = @ptrCast(@alignCast(&addr[i * 8]));
+    //     hash ^= ptr.*;
+    // }
+
+    // const ptr: *const u32 = @ptrCast(@alignCast(&addr[16]));
+    // hash ^= @as(u64, ptr.*);
+
+    // for (0..addr.len % 8) |i| {
+    //     hash ^= @as(u64, addr[64 + i]) << (i * 8);
+    // }
+
+    return @bitCast(hash);
+}
 
 const Address = [20]u8;
 
 pub fn main() !void {
-    var ha_alloc = HugePageAlloc.init(.{ .budget_log2 = 34 });
-    defer ha_alloc.deinit();
+    // var ha_alloc = HugePageAlloc.init(.{ .budget_log2 = 34 });
+    // defer ha_alloc.deinit();
 
-    const alloc = ha_alloc.allocator();
+    const alloc = std.heap.page_allocator; // ha_alloc.allocator();
 
     const indices = try read_file(alloc, "bench-data/addr.index", null);
     defer alloc.free(indices);
@@ -53,7 +76,7 @@ pub fn main() !void {
     var query_hashes = ArrayList(u64).init(alloc);
     defer query_hashes.deinit();
 
-    var addr_scratch: Address = undefined;
+    var addr_scratch: Address align(64) = undefined;
 
     var args = std.process.args();
     _ = args.next() orelse unreachable;
@@ -64,6 +87,13 @@ pub fn main() !void {
             @panic("bad address");
         }
         const hash = hash_addr(67, addr);
+        try query_hashes.append(hash);
+    }
+
+    var randy = std.Random.ChaCha.init(.{0} ** 32);
+    for (0..4096) |_| {
+        randy.fill(&addr_scratch);
+        const hash = hash_addr(67, &addr_scratch);
         try query_hashes.append(hash);
     }
 
@@ -93,9 +123,16 @@ const FILTERS = [_]type{
     // ribbon.Filter(u10),
     // xorf.Filter(u8, 4),
     // xorf.Filter(u8, 3),
-    ribbon.Filter(u7),
-    ribbon.Filter(u8),
-    ribbon.Filter(u9),
+    ribbon.Filter(u128, u6),
+    ribbon.Filter(u128, u7),
+    ribbon.Filter(u128, u8),
+    ribbon.Filter(u128, u9),
+    ribbon.Filter(u128, u10),
+    ribbon.Filter(u64, u6),
+    ribbon.Filter(u64, u7),
+    ribbon.Filter(u64, u8),
+    ribbon.Filter(u64, u9),
+    ribbon.Filter(u64, u10),
     xorf.Filter(u6, 3),
     xorf.Filter(u6, 4),
     xorf.Filter(u7, 3),
@@ -128,9 +165,16 @@ const FILTER_NAMES = [_][]const u8{
     // "ribbon10",
     // "xorf8_4",
     // "xorf8_3",
-    "ribbon7",
-    "ribbon8",
-    "ribbon9",
+    "ribbon128_6",
+    "ribbon128_7",
+    "ribbon128_8",
+    "ribbon128_9",
+    "ribbon128_10",
+    "ribbon64_6",
+    "ribbon64_7",
+    "ribbon64_8",
+    "ribbon64_9",
+    "ribbon64_10",
     "xorf3_6",
     "xorf4_6",
     "xorf3_7",
