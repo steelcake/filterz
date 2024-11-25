@@ -1,20 +1,28 @@
+zig build runbench -Doptimize=ReleaseSafe -- 354881f65cBBd912560105DeF0bc5a2830822ECA 202bBfFaB1e35D940FdE99b214Ba49DAfbCef62A 00Ff00900000002C00BE4EF8F49c000211000c43 354881f65cBBd912560105DeF0bc5aabc0822ECA 354881f65cBBd9100ff105DeF0bc5a2830822ECA  
 read addrs
 finished reading addrs
 parsing sections
-num_sections=2311
-ribbon7: bench.BenchStats{ .query_time = 362444, .construct_time = 12829214682, .mem_usage = 125229817, .num_hits = 41 } Estimated query cost: 8562444
-ribbon8: bench.BenchStats{ .query_time = 358937, .construct_time = 12941084554, .mem_usage = 143120958, .num_hits = 22 } Estimated query cost: 4758937
-ribbon9: bench.BenchStats{ .query_time = 431033, .construct_time = 13660607311, .mem_usage = 161010072, .num_hits = 15 } Estimated query cost: 3431033
-xorf3_6: bench.BenchStats{ .query_time = 135886, .construct_time = 9796780114, .mem_usage = 130635264, .num_hits = 89 } Estimated query cost: 17935886
-xorf4_6: bench.BenchStats{ .query_time = 169981, .construct_time = 10967695989, .mem_usage = 133123584, .num_hits = 101 } Estimated query cost: 20369981
-xorf3_7: bench.BenchStats{ .query_time = 139874, .construct_time = 9722450875, .mem_usage = 152407808, .num_hits = 42 } Estimated query cost: 8539874
-xorf4_7: bench.BenchStats{ .query_time = 166303, .construct_time = 10911497169, .mem_usage = 155310848, .num_hits = 54 } Estimated query cost: 10966303
-xorf3_8: bench.BenchStats{ .query_time = 124896, .construct_time = 9795119458, .mem_usage = 174180352, .num_hits = 24 } Estimated query cost: 4924896
-xorf4_8: bench.BenchStats{ .query_time = 212411, .construct_time = 10846901984, .mem_usage = 177498112, .num_hits = 31 } Estimated query cost: 6412411
-xorf3_9: bench.BenchStats{ .query_time = 140956, .construct_time = 10644221139, .mem_usage = 195952896, .num_hits = 9 } Estimated query cost: 1940956
-xorf4_9: bench.BenchStats{ .query_time = 158509, .construct_time = 11712729214, .mem_usage = 199685376, .num_hits = 12 } Estimated query cost: 2558509
-sbbf6: bench.BenchStats{ .query_time = 62258, .construct_time = 139438914, .mem_usage = 104984804, .num_hits = 3168 } Estimated query cost: 633662258
-sbbf7: bench.BenchStats{ .query_time = 59573, .construct_time = 138828439, .mem_usage = 122482228, .num_hits = 2599 } Estimated query cost: 519859573
-sbbf8: bench.BenchStats{ .query_time = 61315, .construct_time = 143126215, .mem_usage = 139978580, .num_hits = 2169 } Estimated query cost: 433861315
-sbbf9: bench.BenchStats{ .query_time = 59041, .construct_time = 137313771, .mem_usage = 157476926, .num_hits = 1795 } Estimated query cost: 359059041
-sbbf10: bench.BenchStats{ .query_time = 63450, .construct_time = 140566007, .mem_usage = 174974083, .num_hits = 1596 } Estimated query cost: 319263450
+num_sections=92
+ribbon128_6: bench.BenchStats{ .query_time = 6218833, .construct_time = 691499375, .mem_usage = 3635097, .num_hits = 5863 } Estimated query cost: 1178818833
+ribbon128_7: bench.BenchStats{ .query_time = 6288541, .construct_time = 693340708, .mem_usage = 4240947, .num_hits = 2892 } Estimated query cost: 584688541
+ribbon128_8: bench.BenchStats{ .query_time = 5719417, .construct_time = 694305667, .mem_usage = 4846844, .num_hits = 1411 } Estimated query cost: 287919417
+ribbon128_9: bench.BenchStats{ .query_time = 7262334, .construct_time = 707361834, .mem_usage = 5452660, .num_hits = 704 } Estimated query cost: 148062334
+ribbon128_10: bench.BenchStats{ .query_time = 7456417, .construct_time = 746132750, .mem_usage = 6058521, .num_hits = 349 } Estimated query cost: 77256417
+ribbon64_6: bench.BenchStats{ .query_time = 3590625, .construct_time = 2108476917, .mem_usage = 3729402, .num_hits = 5802 } Estimated query cost: 1163990625
+ribbon64_7: bench.BenchStats{ .query_time = 3717625, .construct_time = 2107710583, .mem_usage = 4350971, .num_hits = 2928 } Estimated query cost: 589317625
+ribbon64_8: bench.BenchStats{ .query_time = 3632458, .construct_time = 2123046084, .mem_usage = 4972585, .num_hits = 1481 } Estimated query cost: 299832458
+ribbon64_9: bench.BenchStats{ .query_time = 4366833, .construct_time = 2202452750, .mem_usage = 5594113, .num_hits = 769 } Estimated query cost: 158166833
+ribbon64_10: bench.BenchStats{ .query_time = 4481750, .construct_time = 2198802083, .mem_usage = 6215698, .num_hits = 382 } Estimated query cost: 80881750
+xorf3_6: bench.BenchStats{ .query_time = 1488333, .construct_time = 498257542, .mem_usage = 4483584, .num_hits = 5932 } Estimated query cost: 1187888333
+xorf4_6: bench.BenchStats{ .query_time = 1467791, .construct_time = 424838833, .mem_usage = 4297728, .num_hits = 5916 } Estimated query cost: 1184667791
+xorf3_7: bench.BenchStats{ .query_time = 1445792, .construct_time = 495089875, .mem_usage = 5230848, .num_hits = 3009 } Estimated query cost: 603245792
+xorf4_7: bench.BenchStats{ .query_time = 1523667, .construct_time = 425997125, .mem_usage = 5014016, .num_hits = 2942 } Estimated query cost: 589923667
+xorf3_8: bench.BenchStats{ .query_time = 1494042, .construct_time = 500634458, .mem_usage = 5978112, .num_hits = 1512 } Estimated query cost: 303894042
+xorf4_8: bench.BenchStats{ .query_time = 1371458, .construct_time = 428570083, .mem_usage = 5730304, .num_hits = 1510 } Estimated query cost: 303371458
+xorf3_9: bench.BenchStats{ .query_time = 2144959, .construct_time = 505533167, .mem_usage = 6725376, .num_hits = 757 } Estimated query cost: 153544959
+xorf4_9: bench.BenchStats{ .query_time = 1996500, .construct_time = 425115708, .mem_usage = 6446592, .num_hits = 777 } Estimated query cost: 157396500
+sbbf6: bench.BenchStats{ .query_time = 707042, .construct_time = 10914417, .mem_usage = 3563842, .num_hits = 125149 } Estimated query cost: 25030507042
+sbbf7: bench.BenchStats{ .query_time = 714250, .construct_time = 8748709, .mem_usage = 4157815, .num_hits = 97831 } Estimated query cost: 19566914250
+sbbf8: bench.BenchStats{ .query_time = 814417, .construct_time = 8756583, .mem_usage = 4751742, .num_hits = 78052 } Estimated query cost: 15611214417
+sbbf9: bench.BenchStats{ .query_time = 731709, .construct_time = 8904916, .mem_usage = 5345750, .num_hits = 63074 } Estimated query cost: 12615531709
+sbbf10: bench.BenchStats{ .query_time = 739084, .construct_time = 8574917, .mem_usage = 5939712, .num_hits = 52698 } Estimated query cost: 10540339084
