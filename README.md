@@ -24,20 +24,20 @@ Requires Zig 0.14.0-dev release.
 
 ### Split-Block-Bloom-Filter
 
+Speed optimized version of a bloom filter.
+
 As described in https://github.com/apache/parquet-format/blob/master/BloomFilter.md
 
 ### Xor (BinaryFuse) filter
 
-Mostly as described in https://arxiv.org/abs/2201.01174
-Construction can be improved as described in `Some things that can be improved` section.
+As described in https://arxiv.org/abs/2201.01174
+Construction is a bit janky but constructed filters reach slightly higher space efficiency. This is better in cases where construction is one time and the filter is used for a much longer time.
 
 ### Ribbon filter 
 
 As described in https://arxiv.org/abs/2103.02515
-Solution matrix layout can be improved as described in `Some things that can be improved` section.
-Also a nicer api for dynamic `bits-per-key` would be nice so user can lower bits-per-key while the program is running to control memory usage.
 
-The implementation corresponds to the standard ribbon filter with smash in the paper.
+The implementation corresponds to the standard ribbon filter with "smash" as described in the paper.
 
 ## Benchmarks
 
@@ -53,18 +53,11 @@ NOTE: Cost estimate stat in the benchmark output is calculated by assuming every
 
 Ribbon filter seems to be the best option when on a memory budget. Bloom filter is the king when there is no memory budget.
 
-### Some things that can be improved
+### TODO
 
-Xor filter implemented here is really a BinaryFuse filter. The construction is pretty sketchy but it tries to optimize false positive rate and construction success over construction time.
-I initially implemented it same as in the original C/C++ implementations but it was failing construction, this might be due to some errors in my implementation. Also some optimizations for construction are not implemented. It would be nice to work on these.
-I am leaving it like this since the space-efficiency/false-positive-rate/query-time roughly meet the numbers given in the paper and it seems like ribbon filter is the better option.
-
-Ribbon filter uses a row-major layout with some vectorization in query. The paper says this is not the best and interleaved-column-major layout with mixed column sizes is the best. I didn't implement this initially because it is more difficult.
-Seems like a vanilla implementation in zig goes a long way since we can use the filter with fingerprint types like `u10`. It would be nice to explore implementing interleaved-column-major layout as described in the paper. Or at least supporting mixed column sizes
- to support fractional bits-per-key values would be nice to meet memory budgets more tightly.
-
-There are some ideas that improve the split block bloom filter but they don't drastically effect space efficiency which is what the implementations here are trying to optimize. Seems like these improvements are intended to make false positive rates more stable.
-Rocksdb has a very nicely commented implementation of this.
-
-Would be nice to have a structure that mixes the bloom retrieval and filtering so we have something that says the key is in the set and also gives a value that corresponds to the key. This can be very effective in cases like databases if we are skipping over sections with x elements and each section has x/y elements inside.
-Then our query can say, yes your query should visit this section and it should visit subsections 0,2 and 5 instead of just saying it should visit the section. This might mean that we can further reduce IO 2x in case of a hit by just adding one bit-per-key storage overhead to our filter.
+- Implement [frayed ribbon based filter](https://github.com/bitwiseshiftleft/compressed_map)
+- Implement [bumped ribbon filter](https://github.com/lorenzhs/BuRR)
+- Implement interleaved columnar storage for ribbon filter as described in the paper.
+- Implement mixing column sizes in ribbon filter storage to support fractional bits-per-key configurations e.g. 6.6 bits per key instead of 6 or 7.
+- Improve Xor (Binary Fuse) filter construction speed by pre-sorting the hashes before filter construction as described in the paper.
+- Improve Xor filter parameter selection, currently it is done by trial-error at construction time.
