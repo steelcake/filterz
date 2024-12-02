@@ -49,7 +49,7 @@ make benchmark
 
 [Example results](./bench_result_low_hit.txt)
 
-NOTE: Cost estimate stat in the benchmark output is calculated by assuming every hit generates a disk read, which is priced at 200 microseconds.
+NOTE: Cost estimate stat in the benchmark output is calculated by assuming every hit generates a disk read, which is priced at 50 microseconds.
 
 Ribbon filter seems to be the best option when on a memory budget. Bloom filter is the king when there is no memory budget.
 

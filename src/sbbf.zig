@@ -85,6 +85,7 @@ pub fn Filter(comptime bits_per_key: comptime_int) type {
 
         data: []align(BLOCK_SIZE) u8,
         alloc: Allocator,
+        num_hashes: usize,
 
         pub fn init(alloc: Allocator, hashes: []u64) !Self {
             const bytes = try alloc.alignedAlloc(u8, BLOCK_SIZE, (bits_per_key * hashes.len + 7) / 8);
@@ -96,6 +97,7 @@ pub fn Filter(comptime bits_per_key: comptime_int) type {
             return Self{
                 .data = bytes,
                 .alloc = alloc,
+                .num_hashes = hashes.len,
             };
         }
 
@@ -109,6 +111,10 @@ pub fn Filter(comptime bits_per_key: comptime_int) type {
 
         pub fn mem_usage(self: *const Self) usize {
             return self.data.len;
+        }
+
+        pub fn ideal_mem_usage(self: *const Self) usize {
+            return self.num_hashes * bits_per_key;
         }
     };
 }

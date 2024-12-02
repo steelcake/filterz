@@ -30,7 +30,7 @@ This will generate two files:
 
 The script is configured by default to:
 - Download ~250 million transactions
-- Process them in sections of 100,000 transactions
+- Process them in sections of 500,000 transactions
 - Start from block 16123123
 
 This will create a 10GB file on disk and the benchmark runner loads the entire file to memory.

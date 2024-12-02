@@ -90,8 +90,8 @@ fn calculate_array_len(comptime arity: comptime_int, header: Header) u32 {
 }
 
 pub fn filter_construct(comptime Fingerprint: type, comptime arity: comptime_int, alloc: Allocator, hashes: []u64, seed: *u64, header: *Header) ConstructError![]Fingerprint {
-    const MULTIPLIERS = [_]usize{ 104, 108, 116, 120, 124, 130 };
-    const NUM_TRIES = [_]usize{ 2, 4, 8, 16, 32, 32 };
+    const MULTIPLIERS = [_]usize{ 104, 108, 116, 120, 124, 130, 140 };
+    const NUM_TRIES = [_]usize{ 2, 4, 8, 16, 32, 32, 32 };
 
     const max_header = calculate_header(arity, hashes.len, MULTIPLIERS[MULTIPLIERS.len - 1], NUM_TRIES[NUM_TRIES.len - 1]);
     const max_array_len = calculate_array_len(arity, max_header);
@@ -208,6 +208,7 @@ pub fn Filter(comptime Fingerprint: type, comptime arity: comptime_int) type {
         header: Header,
         fingerprints: []Fingerprint,
         alloc: Allocator,
+        num_hashes: usize,
 
         pub fn init(alloc: Allocator, hashes: []u64) !Self {
             var rand = SplitMix64.init(0);
@@ -220,6 +221,7 @@ pub fn Filter(comptime Fingerprint: type, comptime arity: comptime_int) type {
                 .header = header,
                 .fingerprints = fingerprints,
                 .alloc = alloc,
+                .num_hashes = hashes.len,
             };
         }
 
@@ -233,6 +235,10 @@ pub fn Filter(comptime Fingerprint: type, comptime arity: comptime_int) type {
 
         pub fn mem_usage(self: *const Self) usize {
             return self.fingerprints.len * @typeInfo(Fingerprint).int.bits / 8;
+        }
+
+        pub fn ideal_mem_usage(self: *const Self) usize {
+            return self.num_hashes * @typeInfo(Fingerprint).int.bits / 8;
         }
     };
 }

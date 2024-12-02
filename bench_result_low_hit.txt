@@ -1,28 +1,28 @@
-zig build runbench -Doptimize=ReleaseSafe -- 354881f65cBBd912560105DeF0bc5a2830822ECA 202bBfFaB1e35D940FdE99b214Ba49DAfbCef62A 00Ff00900000002C00BE4EF8F49c000211000c43 354881f65cBBd912560105DeF0bc5aabc0822ECA 354881f65cBBd9100ff105DeF0bc5a2830822ECA  
+zig build runbench -Doptimize=ReleaseFast -- 354881f65cBBd912560105DeF0bc5a2830822ECA 202bBfFaB1e35D940FdE99b214Ba49DAfbCef62A 00Ff00900000002C00BE4EF8F49c000211000c43 354881f65cBBd912560105DeF0bc5aabc0822ECA 354881f65cBBd9100ff105DeF0bc5a2830822ECA  
 read addrs
 finished reading addrs
 parsing sections
-num_sections=92
-ribbon128_6: bench.BenchStats{ .query_time = 6218833, .construct_time = 691499375, .mem_usage = 3635097, .num_hits = 5863 } Estimated query cost: 1178818833
-ribbon128_7: bench.BenchStats{ .query_time = 6288541, .construct_time = 693340708, .mem_usage = 4240947, .num_hits = 2892 } Estimated query cost: 584688541
-ribbon128_8: bench.BenchStats{ .query_time = 5719417, .construct_time = 694305667, .mem_usage = 4846844, .num_hits = 1411 } Estimated query cost: 287919417
-ribbon128_9: bench.BenchStats{ .query_time = 7262334, .construct_time = 707361834, .mem_usage = 5452660, .num_hits = 704 } Estimated query cost: 148062334
-ribbon128_10: bench.BenchStats{ .query_time = 7456417, .construct_time = 746132750, .mem_usage = 6058521, .num_hits = 349 } Estimated query cost: 77256417
-ribbon64_6: bench.BenchStats{ .query_time = 3590625, .construct_time = 2108476917, .mem_usage = 3729402, .num_hits = 5802 } Estimated query cost: 1163990625
-ribbon64_7: bench.BenchStats{ .query_time = 3717625, .construct_time = 2107710583, .mem_usage = 4350971, .num_hits = 2928 } Estimated query cost: 589317625
-ribbon64_8: bench.BenchStats{ .query_time = 3632458, .construct_time = 2123046084, .mem_usage = 4972585, .num_hits = 1481 } Estimated query cost: 299832458
-ribbon64_9: bench.BenchStats{ .query_time = 4366833, .construct_time = 2202452750, .mem_usage = 5594113, .num_hits = 769 } Estimated query cost: 158166833
-ribbon64_10: bench.BenchStats{ .query_time = 4481750, .construct_time = 2198802083, .mem_usage = 6215698, .num_hits = 382 } Estimated query cost: 80881750
-xorf3_6: bench.BenchStats{ .query_time = 1488333, .construct_time = 498257542, .mem_usage = 4483584, .num_hits = 5932 } Estimated query cost: 1187888333
-xorf4_6: bench.BenchStats{ .query_time = 1467791, .construct_time = 424838833, .mem_usage = 4297728, .num_hits = 5916 } Estimated query cost: 1184667791
-xorf3_7: bench.BenchStats{ .query_time = 1445792, .construct_time = 495089875, .mem_usage = 5230848, .num_hits = 3009 } Estimated query cost: 603245792
-xorf4_7: bench.BenchStats{ .query_time = 1523667, .construct_time = 425997125, .mem_usage = 5014016, .num_hits = 2942 } Estimated query cost: 589923667
-xorf3_8: bench.BenchStats{ .query_time = 1494042, .construct_time = 500634458, .mem_usage = 5978112, .num_hits = 1512 } Estimated query cost: 303894042
-xorf4_8: bench.BenchStats{ .query_time = 1371458, .construct_time = 428570083, .mem_usage = 5730304, .num_hits = 1510 } Estimated query cost: 303371458
-xorf3_9: bench.BenchStats{ .query_time = 2144959, .construct_time = 505533167, .mem_usage = 6725376, .num_hits = 757 } Estimated query cost: 153544959
-xorf4_9: bench.BenchStats{ .query_time = 1996500, .construct_time = 425115708, .mem_usage = 6446592, .num_hits = 777 } Estimated query cost: 157396500
-sbbf6: bench.BenchStats{ .query_time = 707042, .construct_time = 10914417, .mem_usage = 3563842, .num_hits = 125149 } Estimated query cost: 25030507042
-sbbf7: bench.BenchStats{ .query_time = 714250, .construct_time = 8748709, .mem_usage = 4157815, .num_hits = 97831 } Estimated query cost: 19566914250
-sbbf8: bench.BenchStats{ .query_time = 814417, .construct_time = 8756583, .mem_usage = 4751742, .num_hits = 78052 } Estimated query cost: 15611214417
-sbbf9: bench.BenchStats{ .query_time = 731709, .construct_time = 8904916, .mem_usage = 5345750, .num_hits = 63074 } Estimated query cost: 12615531709
-sbbf10: bench.BenchStats{ .query_time = 739084, .construct_time = 8574917, .mem_usage = 5939712, .num_hits = 52698 } Estimated query cost: 10540339084
+num_sections=50
+ribbon128_6: bench.BenchStats{ .query_time = 5062688, .construct_time = 1220931045, .mem_usage = 9401430, .ideal_mem_usage = 9127357, .num_hits = 3206 } Estimated query cost: 646262688, Space Overhead: 0.0300
+ribbon128_7: bench.BenchStats{ .query_time = 5035808, .construct_time = 1251174929, .mem_usage = 10968336, .ideal_mem_usage = 10648581, .num_hits = 1631 } Estimated query cost: 331235808, Space Overhead: 0.0300
+ribbon128_8: bench.BenchStats{ .query_time = 4383779, .construct_time = 1236585634, .mem_usage = 12535268, .ideal_mem_usage = 12169832, .num_hits = 774 } Estimated query cost: 159183779, Space Overhead: 0.0300
+ribbon128_9: bench.BenchStats{ .query_time = 5099779, .construct_time = 1327634180, .mem_usage = 14102154, .ideal_mem_usage = 13691041, .num_hits = 389 } Estimated query cost: 82899779, Space Overhead: 0.0300
+ribbon128_10: bench.BenchStats{ .query_time = 5025268, .construct_time = 1325816576, .mem_usage = 15669063, .ideal_mem_usage = 15212272, .num_hits = 175 } Estimated query cost: 40025268, Space Overhead: 0.0300
+ribbon64_6: bench.BenchStats{ .query_time = 4230912, .construct_time = 1576900264, .mem_usage = 9787597, .ideal_mem_usage = 9127357, .num_hits = 3105 } Estimated query cost: 625230912, Space Overhead: 0.0723
+ribbon64_7: bench.BenchStats{ .query_time = 4017680, .construct_time = 1620303542, .mem_usage = 11418864, .ideal_mem_usage = 10648581, .num_hits = 1549 } Estimated query cost: 313817680, Space Overhead: 0.0723
+ribbon64_8: bench.BenchStats{ .query_time = 4072924, .construct_time = 1585619336, .mem_usage = 13050156, .ideal_mem_usage = 12169832, .num_hits = 787 } Estimated query cost: 161472924, Space Overhead: 0.0723
+ribbon64_9: bench.BenchStats{ .query_time = 4909069, .construct_time = 1615656342, .mem_usage = 14681405, .ideal_mem_usage = 13691041, .num_hits = 389 } Estimated query cost: 82709069, Space Overhead: 0.0723
+ribbon64_10: bench.BenchStats{ .query_time = 4960306, .construct_time = 1604239574, .mem_usage = 16312677, .ideal_mem_usage = 15212272, .num_hits = 185 } Estimated query cost: 41960306, Space Overhead: 0.0723
+xorf3_6 FAILED
+xorf4_6: bench.BenchStats{ .query_time = 2447912, .construct_time = 1325189030, .mem_usage = 10866432, .ideal_mem_usage = 9127357, .num_hits = 3166 } Estimated query cost: 635647912, Space Overhead: 0.1905
+xorf3_7 FAILED
+xorf4_7: bench.BenchStats{ .query_time = 2683025, .construct_time = 1380306019, .mem_usage = 12677504, .ideal_mem_usage = 10648581, .num_hits = 1604 } Estimated query cost: 323483025, Space Overhead: 0.1905
+xorf3_8 FAILED
+xorf4_8: bench.BenchStats{ .query_time = 1575649, .construct_time = 1353040202, .mem_usage = 14488576, .ideal_mem_usage = 12169832, .num_hits = 778 } Estimated query cost: 157175649, Space Overhead: 0.1905
+xorf3_9 FAILED
+xorf4_9: bench.BenchStats{ .query_time = 3238851, .construct_time = 1329471771, .mem_usage = 16299648, .ideal_mem_usage = 13691041, .num_hits = 407 } Estimated query cost: 84638851, Space Overhead: 0.1905
+sbbf6: bench.BenchStats{ .query_time = 943748, .construct_time = 354636655, .mem_usage = 9127392, .ideal_mem_usage = 73018992, .num_hits = 19914 } Estimated query cost: 3983743748, Space Overhead: -0.8750
+sbbf7: bench.BenchStats{ .query_time = 987701, .construct_time = 361193949, .mem_usage = 10648623, .ideal_mem_usage = 85188824, .num_hits = 11225 } Estimated query cost: 2245987701, Space Overhead: -0.8750
+sbbf8: bench.BenchStats{ .query_time = 1026234, .construct_time = 363949101, .mem_usage = 12169832, .ideal_mem_usage = 97358656, .num_hits = 6694 } Estimated query cost: 1339826234, Space Overhead: -0.8750
+sbbf9: bench.BenchStats{ .query_time = 1004002, .construct_time = 379417465, .mem_usage = 13691083, .ideal_mem_usage = 109528488, .num_hits = 4107 } Estimated query cost: 822404002, Space Overhead: -0.8750
+sbbf10: bench.BenchStats{ .query_time = 1063023, .construct_time = 365435163, .mem_usage = 15212307, .ideal_mem_usage = 121698320, .num_hits = 2530 } Estimated query cost: 507063023, Space Overhead: -0.8750

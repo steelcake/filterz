@@ -10,7 +10,6 @@ const ribbon = filterz.ribbon;
 // const huge_alloc = @import("huge_alloc");
 // const HugePageAlloc = huge_alloc.HugePageAlloc;
 // const hash_addr = std.hash.XxHash64.hash;
-//
 
 fn hash_addr(seed: u64, addr: []const u8) u64 {
     var hash: [8]u8 align(8) = @bitCast(seed);
@@ -19,17 +18,17 @@ fn hash_addr(seed: u64, addr: []const u8) u64 {
         hash[i % 8] ^= addr[i];
     }
 
-    // for (0..2) |i| {
-    //     const ptr: *const u64 = @ptrCast(@alignCast(&addr[i * 8]));
-    //     hash ^= ptr.*;
-    // }
+    //     // for (0..2) |i| {
+    //     //     const ptr: *const u64 = @ptrCast(@alignCast(&addr[i * 8]));
+    //     //     hash ^= ptr.*;
+    //     // }
 
-    // const ptr: *const u32 = @ptrCast(@alignCast(&addr[16]));
-    // hash ^= @as(u64, ptr.*);
+    //     // const ptr: *const u32 = @ptrCast(@alignCast(&addr[16]));
+    //     // hash ^= @as(u64, ptr.*);
 
-    // for (0..addr.len % 8) |i| {
-    //     hash ^= @as(u64, addr[64 + i]) << (i * 8);
-    // }
+    //     // for (0..addr.len % 8) |i| {
+    //     //     hash ^= @as(u64, addr[64 + i]) << (i * 8);
+    //     // }
 
     return @bitCast(hash);
 }
@@ -97,12 +96,17 @@ pub fn main() !void {
         try query_hashes.append(hash);
     }
 
-    inline for (FILTERS, FILTER_NAMES) |Filter, name| {
-        const stats = try run_bench(Filter, alloc, sections.items, query_hashes.items);
+    inline for (FILTERS, FILTER_NAMES) |Filter, name| @"continue": {
+        const stats = run_bench(Filter, alloc, sections.items, query_hashes.items) catch {
+            std.debug.print("{s} FAILED\n", .{name});
+            break :@"continue";
+        };
 
         const estimate = stats.num_hits * 200000 + stats.query_time;
 
-        std.debug.print("{s}: {any} Estimated query cost: {d}\n", .{ name, stats, estimate });
+        const space_overhead = (@as(f64, @floatFromInt(stats.mem_usage)) - @as(f64, @floatFromInt(stats.ideal_mem_usage))) / @as(f64, @floatFromInt(stats.ideal_mem_usage));
+
+        std.debug.print("{s}: {any} Estimated query cost: {d}, Space Overhead: {d:.4}\n", .{ name, stats, estimate, space_overhead });
     }
 }
 
@@ -194,6 +198,7 @@ const BenchStats = struct {
     query_time: u64 = 0,
     construct_time: u64 = 0,
     mem_usage: usize = 0,
+    ideal_mem_usage: usize = 0,
     num_hits: u64 = 0,
 };
 
@@ -225,6 +230,7 @@ fn run_bench(comptime Filter: type, alloc: Allocator, sections: [][]const Addres
 
     for (filters) |f| {
         stats.mem_usage += f.mem_usage();
+        stats.ideal_mem_usage += f.ideal_mem_usage();
     }
 
     _ = timer.lap();
@@ -252,8 +258,8 @@ fn build_filters(comptime Filter: type, alloc: Allocator, hash_sections: [][]u64
 }
 
 fn build_filter(comptime Filter: type, alloc: Allocator, hashes: []u64) !Filter {
-    for (1..hashes.len) |i| {
-        std.debug.assert(hashes[i - 1] != hashes[i]);
+    if (try has_duplicate(alloc, hashes)) {
+        @panic("failed deduplication");
     }
     return try Filter.init(alloc, hashes);
 }
@@ -266,7 +272,7 @@ fn hash_section(alloc: Allocator, section: []const Address, len: *usize) ![]u64 
         hashes[i] = hash_addr(67, &section[i]);
     }
 
-    std.sort.pdq(u64, hashes, {}, std.sort.asc(u64));
+    std.mem.sort(u64, hashes, {}, std.sort.asc(u64));
 
     var write_idx: usize = 0;
 
@@ -280,6 +286,23 @@ fn hash_section(alloc: Allocator, section: []const Address, len: *usize) ![]u64 
     len.* = write_idx + 1;
 
     return hashes;
+}
+
+fn has_duplicate(
+    alloc: Allocator,
+    hashes: []u64,
+) !bool {
+    var hm = std.AutoHashMap(u64, void).init(alloc);
+    defer hm.deinit();
+
+    for (hashes) |h| {
+        const old = try hm.fetchPut(h, undefined);
+        if (old != null) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 fn print_hex(alloc: Allocator, addr: Address) !void {
