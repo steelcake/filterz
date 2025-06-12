@@ -9,29 +9,33 @@ const sbbf = filterz.sbbf;
 const ribbon = filterz.ribbon;
 // const huge_alloc = @import("huge_alloc");
 // const HugePageAlloc = huge_alloc.HugePageAlloc;
-// const hash_addr = std.hash.XxHash64.hash;
+const hash_fn = std.hash.XxHash3.hash;
 
-fn hash_addr(seed: u64, addr: []const u8) u64 {
-    var hash: [8]u8 align(8) = @bitCast(seed);
-
-    for (0..20) |i| {
-        hash[i % 8] ^= addr[i];
-    }
-
-    //     // for (0..2) |i| {
-    //     //     const ptr: *const u64 = @ptrCast(@alignCast(&addr[i * 8]));
-    //     //     hash ^= ptr.*;
-    //     // }
-
-    //     // const ptr: *const u32 = @ptrCast(@alignCast(&addr[16]));
-    //     // hash ^= @as(u64, ptr.*);
-
-    //     // for (0..addr.len % 8) |i| {
-    //     //     hash ^= @as(u64, addr[64 + i]) << (i * 8);
-    //     // }
-
-    return @bitCast(hash);
+fn hash_addr(addr: []const u8) u64 {
+    return hash_fn(0, addr);
 }
+
+// fn hash_addr(seed: u64, addr: []const u8) u64 {
+//     var hash: [8]u8 align(8) = @bitCast(seed);
+
+//     for (0..20) |i| {
+//         hash[i % 8] ^= addr[i];
+//     }
+
+//     //     // for (0..2) |i| {
+//     //     //     const ptr: *const u64 = @ptrCast(@alignCast(&addr[i * 8]));
+//     //     //     hash ^= ptr.*;
+//     //     // }
+
+//     //     // const ptr: *const u32 = @ptrCast(@alignCast(&addr[16]));
+//     //     // hash ^= @as(u64, ptr.*);
+
+//     //     // for (0..addr.len % 8) |i| {
+//     //     //     hash ^= @as(u64, addr[64 + i]) << (i * 8);
+//     //     // }
+
+//     return @bitCast(hash);
+// }
 
 const Address = [20]u8;
 
@@ -85,14 +89,14 @@ pub fn main() !void {
         if (addr.len != 20) {
             @panic("bad address");
         }
-        const hash = hash_addr(67, addr);
+        const hash = hash_addr(addr);
         try query_hashes.append(hash);
     }
 
     var randy = std.Random.ChaCha.init(.{0} ** 32);
     for (0..4096) |_| {
         randy.fill(&addr_scratch);
-        const hash = hash_addr(67, &addr_scratch);
+        const hash = hash_addr(&addr_scratch);
         try query_hashes.append(hash);
     }
 
@@ -102,11 +106,11 @@ pub fn main() !void {
             break :@"continue";
         };
 
-        const estimate = stats.num_hits * 200000 + stats.query_time;
+        const estimate = @as(f64, @floatFromInt(stats.num_hits * 200000 + stats.query_time));
 
         const space_overhead = (@as(f64, @floatFromInt(stats.mem_usage)) - @as(f64, @floatFromInt(stats.ideal_mem_usage))) / @as(f64, @floatFromInt(stats.ideal_mem_usage));
 
-        std.debug.print("{s}: {any} Estimated query cost: {d}, Space Overhead: {d:.4}\n", .{ name, stats, estimate, space_overhead });
+        std.debug.print("{s}: {any} Estimated query cost: {d:.4}, Space Overhead: {d:.4}, Time per query: {d}\n", .{ name, stats, estimate, space_overhead, stats.query_time / stats.num_queries });
     }
 }
 
@@ -127,29 +131,35 @@ const FILTERS = [_]type{
     // ribbon.Filter(u10),
     // xorf.Filter(u8, 4),
     // xorf.Filter(u8, 3),
-    ribbon.Filter(u128, u6),
-    ribbon.Filter(u128, u7),
-    ribbon.Filter(u128, u8),
-    ribbon.Filter(u128, u9),
-    ribbon.Filter(u128, u10),
-    ribbon.Filter(u64, u6),
-    ribbon.Filter(u64, u7),
-    ribbon.Filter(u64, u8),
-    ribbon.Filter(u64, u9),
-    ribbon.Filter(u64, u10),
-    xorf.Filter(u6, 3),
-    xorf.Filter(u6, 4),
-    xorf.Filter(u7, 3),
-    xorf.Filter(u7, 4),
-    xorf.Filter(u8, 3),
-    xorf.Filter(u8, 4),
-    xorf.Filter(u9, 3),
-    xorf.Filter(u9, 4),
-    sbbf.Filter(6),
-    sbbf.Filter(7),
-    sbbf.Filter(8),
-    sbbf.Filter(9),
-    sbbf.Filter(10),
+    // ribbon.Filter(u128, u6),
+    // ribbon.Filter(u128, u7),
+    // ribbon.Filter(u128, u8),
+    // ribbon.Filter(u128, u9),
+    // ribbon.Filter(u128, u10),
+    ribbon.Filter(u128, u16),
+    // ribbon.Filter(u64, u6),
+    // ribbon.Filter(u64, u7),
+    // ribbon.Filter(u64, u8),
+    // ribbon.Filter(u64, u9),
+    // ribbon.Filter(u64, u10),
+    // xorf.Filter(u6, 3),
+    // xorf.Filter(u6, 4),
+    // xorf.Filter(u7, 3),
+    // xorf.Filter(u7, 4),
+    // xorf.Filter(u8, 3),
+    // xorf.Filter(u8, 4),
+    // xorf.Filter(u9, 3),
+    // xorf.Filter(u9, 4),
+    xorf.Filter(u14, 3),
+    xorf.Filter(u14, 4),
+    // sbbf.Filter(6),
+    // sbbf.Filter(7),
+    // sbbf.Filter(8),
+    // sbbf.Filter(9),
+    // sbbf.Filter(10),
+    // sbbf.Filter(12),
+    // sbbf.Filter(13),
+    sbbf.Filter(24),
 };
 
 const FILTER_NAMES = [_][]const u8{
@@ -169,29 +179,35 @@ const FILTER_NAMES = [_][]const u8{
     // "ribbon10",
     // "xorf8_4",
     // "xorf8_3",
-    "ribbon128_6",
-    "ribbon128_7",
-    "ribbon128_8",
-    "ribbon128_9",
-    "ribbon128_10",
-    "ribbon64_6",
-    "ribbon64_7",
-    "ribbon64_8",
-    "ribbon64_9",
-    "ribbon64_10",
-    "xorf3_6",
-    "xorf4_6",
-    "xorf3_7",
-    "xorf4_7",
-    "xorf3_8",
-    "xorf4_8",
-    "xorf3_9",
-    "xorf4_9",
-    "sbbf6",
-    "sbbf7",
-    "sbbf8",
-    "sbbf9",
-    "sbbf10",
+    // "ribbon128_6",
+    // "ribbon128_7",
+    // "ribbon128_8",
+    // "ribbon128_9",
+    // "ribbon128_10",
+    "ribbon128_16",
+    // "ribbon64_6",
+    // "ribbon64_7",
+    // "ribbon64_8",
+    // "ribbon64_9",
+    // "ribbon64_10",
+    // "xorf3_6",
+    // "xorf4_6",
+    // "xorf3_7",
+    // "xorf4_7",
+    // "xorf3_8",
+    // "xorf4_8",
+    // "xorf3_9",
+    // "xorf4_9",
+    "xorf3_16",
+    "xorf4_16",
+    // "sbbf6",
+    // "sbbf7",
+    // "sbbf8",
+    // "sbbf9",
+    // "sbbf10",
+    // "sbbf12",
+    // "sbbf13",
+    "sbbf16",
 };
 
 const BenchStats = struct {
@@ -200,6 +216,7 @@ const BenchStats = struct {
     mem_usage: usize = 0,
     ideal_mem_usage: usize = 0,
     num_hits: u64 = 0,
+    num_queries: u64 = 0,
 };
 
 fn run_bench(comptime Filter: type, alloc: Allocator, sections: [][]const Address, query_hashes: []u64) !BenchStats {
@@ -238,6 +255,7 @@ fn run_bench(comptime Filter: type, alloc: Allocator, sections: [][]const Addres
     for (filters) |f| {
         for (query_hashes) |h| {
             stats.num_hits += @intFromBool(f.check(h));
+            stats.num_queries += 1;
         }
     }
 
@@ -269,7 +287,7 @@ fn hash_section(alloc: Allocator, section: []const Address, len: *usize) ![]u64 
     errdefer alloc.free(hashes);
 
     for (0..section.len) |i| {
-        hashes[i] = hash_addr(67, &section[i]);
+        hashes[i] = hash_addr(&section[i]);
     }
 
     std.mem.sort(u64, hashes, {}, std.sort.asc(u64));
@@ -328,7 +346,7 @@ fn read_file(alloc: Allocator, path: []const u8, size_hint: ?usize) ![]u8 {
         alloc,
         std.math.maxInt(usize),
         size_hint,
-        64,
+        std.mem.Alignment.@"64",
         null,
     );
 }

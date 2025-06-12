@@ -8,7 +8,7 @@ fn reduce(len: u32, x: u32) u32 {
 
 fn calculate_start_pos(comptime CoeffRow: type, seed: u64, n: u32, hash: u64) u32 {
     const coeff_bits = @typeInfo(CoeffRow).int.bits;
-    const W = coeff_bits / 4;
+    const W = coeff_bits / 8;
     const hash0 = seed ^ hash;
     const h: u32 = @truncate(hash0 ^ (hash0 >> 32));
     const smash_pos = reduce(n + W * 2, h);
@@ -49,7 +49,7 @@ fn calculate_result_row(comptime ResultRow: type, seed: u64, hash: u64) ResultRo
 }
 
 pub fn construct(comptime CoeffRow: type, comptime ResultRow: type, alloc: Allocator, hashes: []u64, seed: *u64) ConstructError![]ResultRow {
-    const MIN_MULTIPLIER = 102; // % space overhead
+    const MIN_MULTIPLIER = 103; // % space overhead
     const MAX_MULTIPLIER = 140;
 
     const max_size = calculate_size(CoeffRow, hashes.len, MAX_MULTIPLIER);

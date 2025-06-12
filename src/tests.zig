@@ -32,7 +32,7 @@ test "smoke" {
 
 fn ToFuzz(comptime Filter: type) type {
     return struct {
-        fn to_fuzz(input: []const u8) anyerror!void {
+        fn to_fuzz(_: @TypeOf(.{}), input: []const u8) anyerror!void {
             if (input.len < 8) {
                 return;
             }
@@ -91,6 +91,6 @@ const FILTERS = [_]type{
 
 test "fuzz" {
     inline for (FILTERS) |Filter| {
-        try std.testing.fuzz(ToFuzz(Filter).to_fuzz, .{});
+        try std.testing.fuzz(.{}, ToFuzz(Filter).to_fuzz, .{});
     }
 }

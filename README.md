@@ -3,6 +3,10 @@
 Implementations of some probabilistic filter structures. Implemented with `build once, use many times` use case in mind.
 All filters export a `Filter` interface that can be used like this:
 
+> [!WARNING]
+> Using xor/ribbon filters with weird sized integers like u7, u6 etc. doesn't work properly. Need to implement manual integer bit packed slices for it to properly work.
+> It is recommended to just use ribbon filter with u8 or u16
+
 ```zig
 const Filter = filterz.ribbon.Filter(u10);
 
@@ -18,7 +22,8 @@ Each filter also exports a lower level API that can be used to implement more ad
 - Reducing bits-per-key while the program is running to meet some memory usage criteria.
 - Loading only a part of a filter from disk and using it to query.
 
-Requires Zig 0.14.0-dev release.
+Developed with latest zig release (master branch).
+It means it hasn't been updated properly yet if it doesn't work with current master release.
 
 ## Filters
 
@@ -49,7 +54,7 @@ make benchmark
 
 [Example results](./bench_result_low_hit.txt)
 
-NOTE: Cost estimate stat in the benchmark output is calculated by assuming every hit generates a disk read, which is priced at 50 microseconds.
+NOTE: Cost estimate stat in the benchmark output is calculated by assuming every hit generates a disk read, which is priced at 200 microseconds.
 
 Ribbon filter seems to be the best option when on a memory budget. Bloom filter is the king when there is no memory budget.
 
