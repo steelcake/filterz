@@ -27,7 +27,10 @@ fn smoke_test(comptime Filter: type) !void {
 
 test "smoke" {
     inline for (FILTERS) |Filter| {
-        try smoke_test(Filter);
+        smoke_test(Filter) catch |e| {
+            std.log.warn("Failed to run for filter {s}", .{@typeName(Filter)});
+            return e;
+        };
     }
 }
 

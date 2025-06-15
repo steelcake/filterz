@@ -1,3 +1,6 @@
+// The code in this module is ported from https://github.com/FastFilter/xor_singleheader/blob/master/include/binaryfusefilter.h
+// See the XOR_SINGLEHEADER_LICENSE for license info
+
 const std = @import("std");
 const shr = std.math.shr;
 const shl = std.math.shl;
@@ -13,9 +16,9 @@ const POPULATE_MAX_ITER = 100;
 fn make_hash(key: u64, seed: u64) u64 {
     var hash = key +% seed;
     hash ^= shr(u64, hash, 33);
-    hash = hash *% @as(u64, 0xff51afd7ed558ccd);
+    hash *%= @as(u64, 0xff51afd7ed558ccd);
     hash ^= shr(u64, hash, 33);
-    hash = hash *% @as(u64, 0xc4ceb9fe1a85ec53);
+    hash *%= @as(u64, 0xc4ceb9fe1a85ec53);
     hash ^= shr(u64, hash, 33);
     return hash;
 }
@@ -126,10 +129,6 @@ fn h012_mod(x: u8) u8 {
     return if (x > 2) x - 3 else x;
 }
 
-// fn sort_and_remove_duplicates(keys: []u64) {
-
-// }
-
 pub const Error = error{
     OutOfMemory,
 };
@@ -176,6 +175,7 @@ pub fn populate(init_keys: []u64, header: *Header, allocator: Allocator, fingerp
         }
 
         @memset(reverse_order, 0);
+        reverse_order[keys.len] = 1;
         @memset(t2_count, 0);
         @memset(t2_hash, 0);
         header.seed = rng_next(&rng_counter);
@@ -287,14 +287,17 @@ pub fn populate(init_keys: []u64, header: *Header, allocator: Allocator, fingerp
             break;
         }
 
-        if (duplicates > 0) {
-            // keys = sort_and_remove_duplicates(keys);
-            // TODO
-            unreachable;
-        }
+        // if (duplicates > 0) {
+        //     keys = sort_and_remove_duplicates(keys);
+        //     TODO
+        //     unreachable;
+        // }
     }
 
-    for (0..keys.len) |i| {
+    var i = keys.len - 1;
+    // This wraps the integer around to exit the loop
+    // :)
+    while (i < keys.len) : (i -%= 1) {
         const hash = reverse_order.ptr[i];
         const xor2 = make_fingerprint(hash);
         const found = reverse_h.ptr[i];
