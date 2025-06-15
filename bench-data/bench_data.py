@@ -4,8 +4,8 @@ import asyncio
 
 DATA_FILE_PATH = "addr.data"
 INDEX_FILE_PATH = "addr.index"
-TOTAL_TX = 25123123
-TX_PER_SECTION = 500000
+TOTAL_TX = 50_000_000
+TX_PER_SECTION = 1_000_000
 
 async def main():
     client = hypersync.HypersyncClient(ClientConfig())
