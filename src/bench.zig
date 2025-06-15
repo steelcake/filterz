@@ -7,6 +7,7 @@ const Timer = std.time.Timer;
 const xorf = filterz.xorf;
 const sbbf = filterz.sbbf;
 const ribbon = filterz.ribbon;
+const bfuse = filterz.bfuse;
 // const huge_alloc = @import("huge_alloc");
 // const HugePageAlloc = huge_alloc.HugePageAlloc;
 const hash_fn = std.hash.XxHash3.hash;
@@ -150,8 +151,8 @@ const FILTERS = [_]type{
     // xorf.Filter(u8, 4),
     // xorf.Filter(u9, 3),
     // xorf.Filter(u9, 4),
-    xorf.Filter(u14, 3),
-    xorf.Filter(u14, 4),
+    xorf.Filter(u16, 3),
+    xorf.Filter(u16, 4),
     // sbbf.Filter(6),
     // sbbf.Filter(7),
     // sbbf.Filter(8),
@@ -160,6 +161,7 @@ const FILTERS = [_]type{
     // sbbf.Filter(12),
     // sbbf.Filter(13),
     sbbf.Filter(24),
+    bfuse.Filter,
 };
 
 const FILTER_NAMES = [_][]const u8{
@@ -207,7 +209,8 @@ const FILTER_NAMES = [_][]const u8{
     // "sbbf10",
     // "sbbf12",
     // "sbbf13",
-    "sbbf16",
+    "sbbf24",
+    "bfuse3_16",
 };
 
 const BenchStats = struct {
