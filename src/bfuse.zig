@@ -1,5 +1,5 @@
 // The code in this module is ported from https://github.com/FastFilter/xor_singleheader/blob/master/include/binaryfusefilter.h
-// See the XOR_SINGLEHEADER_LICENSE for license info
+// It is licensed under Apache License 2.0 that can be found in LICENSE-APACHE file
 
 const std = @import("std");
 const shr = std.math.shr;
