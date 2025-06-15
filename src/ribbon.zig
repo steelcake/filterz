@@ -64,7 +64,7 @@ pub fn construct(comptime CoeffRow: type, comptime ResultRow: type, alloc: Alloc
         const size: u32 = @intCast(calculate_size(CoeffRow, hashes.len, multiplier));
         const start_range = size + 1 - @typeInfo(CoeffRow).int.bits;
         // const num_tries = multiplier - MIN_MULTIPLIER + 1;
-        const num_tries = 1;
+        const num_tries = 3;
 
         const coeff_matrix = coeff_matrix_storage[0..size];
         const result_matrix = result_matrix_storage[0..size];
@@ -153,7 +153,7 @@ fn check_filter(comptime CoeffRow: type, comptime RealResultRow: type, solution_
 
     const coeff_bits = @typeInfo(CoeffRow).int.bits;
 
-    const start_range: u32 = @intCast(solution_matrix.len + 1 - coeff_bits);
+    const start_range: u32 = @intCast(solution_matrix.len +% 1 -% coeff_bits);
     const start_pos = calculate_start_pos(CoeffRow, seed, start_range, hash);
     const coeff_row = calculate_coeff_row(CoeffRow, seed, hash);
     const expected_result_row = calculate_result_row(RealResultRow, seed, hash);
@@ -166,18 +166,18 @@ fn check_filter(comptime CoeffRow: type, comptime RealResultRow: type, solution_
     var data: [coeff_bits]ResultRow align(64) = undefined;
     for (0..coeff_bits) |i| {
         // use raw pointer here since compiler can't remove the bounds check
-        data[i] = solution_matrix.ptr[start_pos + i];
+        data[i] = solution_matrix.ptr[start_pos +% i];
     }
 
     const sol_matrix_v = @as([*]Vec, @ptrCast(&data))[0..num_vecs];
     var result_rows: Vec = @splat(0);
 
     for (0..num_vecs) |i| {
-        const idx = i * num_rows_per_vec;
+        const idx = i *% num_rows_per_vec;
 
         var rr: Vec = undefined;
         for (0..num_rows_per_vec) |j| {
-            rr[j] = @truncate(std.math.shr(CoeffRow, coeff_row, idx + j));
+            rr[j] = @truncate(std.math.shr(CoeffRow, coeff_row, idx +% j));
         }
 
         const sol_v = sol_matrix_v.ptr[i];

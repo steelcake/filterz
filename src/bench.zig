@@ -10,7 +10,7 @@ const ribbon = filterz.ribbon;
 const bfuse = filterz.bfuse;
 // const huge_alloc = @import("huge_alloc");
 // const HugePageAlloc = huge_alloc.HugePageAlloc;
-const hash_fn = std.hash.XxHash3.hash;
+const hash_fn = std.hash.RapidHash.hash;
 
 fn hash_addr(addr: []const u8) u64 {
     return hash_fn(0, addr);
@@ -257,8 +257,8 @@ fn run_bench(comptime Filter: type, alloc: Allocator, sections: [][]const Addres
 
     for (filters) |f| {
         for (query_hashes) |h| {
-            stats.num_hits += @intFromBool(f.check(h));
-            stats.num_queries += 1;
+            stats.num_hits +%= @intFromBool(f.check(h));
+            stats.num_queries +%= 1;
         }
     }
 
