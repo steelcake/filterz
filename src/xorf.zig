@@ -39,15 +39,6 @@ fn make_subhashes(comptime arity: comptime_int, header: *const Header, h: u64) [
     return subhashes;
 }
 
-pub fn check_prepared(comptime Fingerprint: type, comptime arity: comptime_int, header: *const Header, fingerprints: [arity]Fingerprint, subhashes: [arity]u32, hash: u64) bool {
-    const h = hash ^ header.seed;
-    var f = make_fingerprint(Fingerprint, h);
-    inline for (subhashes) |sh| {
-        f ^= fingerprints.ptr[sh];
-    }
-    return f == 0;
-}
-
 pub fn filter_check(comptime Fingerprint: type, comptime arity: comptime_int, header: *const Header, fingerprints: []const Fingerprint, hash: u64) bool {
     const h = hash ^ header.seed;
     const subhashes = make_subhashes(arity, header, h);
@@ -61,27 +52,41 @@ pub fn filter_check(comptime Fingerprint: type, comptime arity: comptime_int, he
 pub const ConstructError = error{
     OutOfMemory,
     ConstructFail,
+    SizeMismatch,
 };
 
-fn calculate_segment_length(size: u32) u32 {
+fn calculate_segment_length(comptime arity: comptime_int, size: u32) u32 {
     const sz = @as(f64, @floatFromInt(size));
-    const base = @as(u32, @intFromFloat(@floor(@log(sz) / @log(3.33) + 2.25)));
-    return std.math.shl(u32, @as(u32, 1), base);
+    switch (arity) {
+        3 => {
+            const base = @as(u32, @intFromFloat(@floor(@log(sz) / @log(3.33) + 2.25)));
+            return std.math.shl(u32, @as(u32, 1), base);
+        },
+        4 => {
+            const base = @as(u32, @intFromFloat(@floor(@log(sz) / @log(2.91) - 0.5)));
+            return std.math.shl(u32, @as(u32, 1), base);
+        },
+        else => @compileError("only 3 and 4 are supported as arity"),
+    }
 }
 
-fn calculate_size_factor(size: u32) f64 {
+fn calculate_size_factor(comptime arity: comptime_int, size: u32) f64 {
     const sz = @as(f64, @floatFromInt(size));
-    return @max(1.125, 0.875 + 0.25 * @log(1000000.0) / @log(sz));
+    switch (arity) {
+        3 => return @max(1.125, 0.875 + 0.25 * @log(1000000.0) / @log(sz)),
+        4 => return @max(1.075, 0.77 + 0.305 * @log(600000.0) / @log(sz)),
+        else => @compileError("only 3 and 4 are supported as arity"),
+    }
 }
 
 pub fn calculate_header(comptime arity: comptime_int, num_keys: u32) Header {
     const size = num_keys;
     const segment_length = @min(
-        if (size == 0) 4 else calculate_segment_length(size),
+        if (size == 0) 4 else calculate_segment_length(arity, size),
         262144,
     );
     const segment_length_mask = segment_length - 1;
-    const size_factor = if (size <= 1) 0 else calculate_size_factor(size);
+    const size_factor = if (size <= 1) 0 else calculate_size_factor(arity, size);
     const capacity = if (size <= 1) 0 else @as(u32, @intFromFloat(@round(@as(f64, @floatFromInt(size)) * size_factor)));
     const init_segment_count = (capacity + segment_length - 1) / segment_length - (arity - 1);
     const array_length_calc = (init_segment_count + arity - 1) * segment_length;
@@ -103,7 +108,11 @@ pub fn calculate_header(comptime arity: comptime_int, num_keys: u32) Header {
     };
 }
 
-pub fn filter_construct(comptime Fingerprint: type, comptime arity: comptime_int, alloc: Allocator, hashes: []u64, seed: *u64, header: *Header) ConstructError![]Fingerprint {
+pub fn construct_fingerprints(comptime Fingerprint: type, comptime arity: comptime_int, fingerprints: []Fingerprint, alloc: Allocator, hashes: []u64, header: *Header) ConstructError!void {
+    if (fingerprints.len != header.array_length) {
+        return ConstructError.SizeMismatch;
+    }
+
     header.* = calculate_header(arity, @intCast(hashes.len));
     const max_array_len = header.array_length;
 
@@ -122,13 +131,14 @@ pub fn filter_construct(comptime Fingerprint: type, comptime arity: comptime_int
     var stack_hi_storage = try alloc.alloc(u8, max_array_len);
     defer alloc.free(stack_hi_storage);
 
+    var rand = SplitMix64.init(0x726b2b9d438b9d4d);
+
     var iter_no: u32 = 0;
     while (true) : (iter_no += 1) {
         if (iter_no + 1 > 100) {
             unreachable;
         }
         const array_len = header.array_length;
-        var rand = SplitMix64.init(seed.*);
 
         const set_xormask = set_xormask_storage[0..array_len];
         const set_count = set_count_storage[0..array_len];
@@ -138,7 +148,6 @@ pub fn filter_construct(comptime Fingerprint: type, comptime arity: comptime_int
 
         const next_seed = rand.next();
         header.seed = next_seed;
-        seed.* = next_seed;
 
         var stack_len: u32 = 0;
         var queue_len: u32 = 0;
@@ -187,7 +196,6 @@ pub fn filter_construct(comptime Fingerprint: type, comptime arity: comptime_int
             continue;
         }
 
-        const fingerprints = try alloc.alloc(Fingerprint, array_len);
         @memset(fingerprints, 0);
 
         while (stack_len > 0) {
@@ -207,7 +215,7 @@ pub fn filter_construct(comptime Fingerprint: type, comptime arity: comptime_int
             fingerprints[to_change] = f;
         }
 
-        return fingerprints;
+        return;
     }
 
     return ConstructError.ConstructFail;
@@ -223,11 +231,12 @@ pub fn Filter(comptime Fingerprint: type, comptime arity: comptime_int) type {
         num_hashes: usize,
 
         pub fn init(alloc: Allocator, hashes: []u64) !Self {
-            var rand = SplitMix64.init(0);
+            var header = calculate_header(arity, @intCast(hashes.len));
 
-            var seed = rand.next();
-            var header: Header = undefined;
-            const fingerprints = try filter_construct(Fingerprint, arity, alloc, hashes, &seed, &header);
+            const fingerprints = try alloc.alloc(Fingerprint, header.array_length);
+            errdefer alloc.free(fingerprints);
+
+            try construct_fingerprints(Fingerprint, arity, fingerprints, alloc, hashes, &header);
 
             return Self{
                 .header = header,
