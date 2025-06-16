@@ -2,7 +2,7 @@
 
 This script downloads Ethereum transaction data for benchmarking various filter implementations.
 
-## Setup
+## Setup (not-uv)
 
 1. Create a Python virtual environment:
    ```bash
@@ -14,6 +14,12 @@ This script downloads Ethereum transaction data for benchmarking various filter 
    ```bash
    pip install -r requirements.txt
    ```
+
+## Usage with uv
+
+```bash
+uv run bench_data.py
+```
 
 ## Usage
 
@@ -29,11 +35,11 @@ This will generate two files:
 ## Configuration
 
 The script is configured by default to:
-- Download ~250 million transactions
-- Process them in sections of 500,000 transactions
+- Download ~50 million transactions
+- Process them in sections of 1,000,000 transactions
 - Start from block 16123123
 
-This will create a 10GB file on disk and the benchmark runner loads the entire file to memory.
+This will create a 2GB file on disk and the benchmark runner loads the entire file to memory.
 This might cause OOM failure if the system doesn't have enough RAM.
 
 You can modify these parameters in the script by adjusting:
