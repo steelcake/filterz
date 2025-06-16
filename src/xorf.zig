@@ -22,10 +22,6 @@ pub const Header = struct {
     array_length: u32,
 };
 
-pub fn prepare_subhashes(comptime arity: comptime_int, header: *const Header, hash: u64) [arity]u32 {
-    return make_subhashes(arity, header, hash ^ header.seed);
-}
-
 fn make_subhashes(comptime arity: comptime_int, header: *const Header, h: u64) [arity]u32 {
     const hl = reduce(header.segment_count_length, @truncate(h));
 
