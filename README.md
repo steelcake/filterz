@@ -34,7 +34,6 @@ As described in https://github.com/apache/parquet-format/blob/master/BloomFilter
 ### Xor (BinaryFuse) filter
 
 As described in https://arxiv.org/abs/2201.01174
-Construction is a bit janky but constructed filters reach slightly higher space efficiency. This is better in cases where construction is one time and the filter is used for a much longer time.
 
 ### Ribbon filter 
 
@@ -53,3 +52,21 @@ make benchmark
 [Example results](./bench_result_low_hit.txt)
 
 NOTE: Cost estimate stat in the benchmark output is calculated by assuming every hit generates a disk read, which is priced at 200 microseconds.
+
+## License
+
+Licensed under either of
+
+ * Apache License, Version 2.0
+   ([LICENSE-APACHE](LICENSE-APACHE) or http://www.apache.org/licenses/LICENSE-2.0)
+ * MIT license
+   ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
+
+at your option.
+
+## Contribution
+
+Unless you explicitly state otherwise, any contribution intentionally submitted
+for inclusion in the work by you, as defined in the Apache-2.0 license, shall be
+dual licensed as above, without any additional terms or conditions.
+

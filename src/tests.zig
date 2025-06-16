@@ -4,7 +4,6 @@ const SplitMix64 = std.Random.SplitMix64;
 const sbbf = @import("sbbf.zig");
 const xorf = @import("xorf.zig");
 const ribbon = @import("ribbon.zig");
-const bfuse = @import("bfuse.zig");
 
 fn smoke_test(comptime Filter: type) !void {
     var rand = SplitMix64.init(0);
@@ -91,7 +90,6 @@ const FILTERS = [_]type{
     ribbon.Filter(u128, u12),
     ribbon.Filter(u128, u20),
     ribbon.Filter(u128, u7),
-    bfuse.Filter,
 };
 
 test "fuzz" {

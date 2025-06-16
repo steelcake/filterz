@@ -2,8 +2,9 @@ zig build runbench -Doptimize=ReleaseSafe -- 354881f65cBBd912560105DeF0bc5a28308
 read addrs
 finished reading addrs
 parsing sections
-num_sections=49
-ribbon128_16: bench.BenchStats{ .query_time = 6684578, .construct_time = 1149838045, .mem_usage = 25080410, .ideal_mem_usage = 24278264, .num_hits = 3, .num_queries = 200949 } Estimated query cost: 7284578.0000, Space Overhead: 0.0330, Time per query: 33
-xorf3_16: bench.BenchStats{ .query_time = 4303453, .construct_time = 1567856577, .mem_usage = 25113088, .ideal_mem_usage = 21243463, .num_hits = 13, .num_queries = 200949 } Estimated query cost: 6903453.0000, Space Overhead: 0.1822, Time per query: 21
-xorf4_16: bench.BenchStats{ .query_time = 4911649, .construct_time = 1626829408, .mem_usage = 25249280, .ideal_mem_usage = 21243463, .num_hits = 16, .num_queries = 200949 } Estimated query cost: 8111649.0000, Space Overhead: 0.1886, Time per query: 24
-sbbf16: bench.BenchStats{ .query_time = 1973734, .construct_time = 456824349, .mem_usage = 36419008, .ideal_mem_usage = 36417396, .num_hits = 19, .num_queries = 200949 } Estimated query cost: 5773734.0000, Space Overhead: 0.0000, Time per query: 9
+num_sections=50
+ribbon128_16: bench.BenchStats{ .query_time = 7065900, .construct_time = 2400553154, .mem_usage = 43582960, .ideal_mem_usage = 42236308, .num_hits = 3, .num_queries = 205050 } Estimated query cost: 7665900.0000, Space Overhead: 0.0319, Time per query: 34
+xorf3_16: bench.BenchStats{ .query_time = 2156586, .construct_time = 1312871136, .mem_usage = 48480256, .ideal_mem_usage = 42236308, .num_hits = 3, .num_queries = 205050 } Estimated query cost: 2756586.0000, Space Overhead: 0.1478, Time per query: 10
+xorf4_16: bench.BenchStats{ .query_time = 2568171, .construct_time = 2468409275, .mem_usage = 45858816, .ideal_mem_usage = 42236308, .num_hits = 4, .num_queries = 205050 } Estimated query cost: 3368171.0000, Space Overhead: 0.0858, Time per query: 12
+sbbf24: bench.BenchStats{ .query_time = 1396146, .construct_time = 699422151, .mem_usage = 63355968, .ideal_mem_usage = 63354462, .num_hits = 32, .num_queries = 205050 } Estimated query cost: 7796146.0000, Space Overhead: 0.0000, Time per query: 6
+bfuse3_16: bench.BenchStats{ .query_time = 2211379, .construct_time = 1193234087, .mem_usage = 48480256, .ideal_mem_usage = 42236308, .num_hits = 5, .num_queries = 205050 } Estimated query cost: 3211379.0000, Space Overhead: 0.1478, Time per query: 10
