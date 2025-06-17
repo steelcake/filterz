@@ -104,7 +104,7 @@ pub fn calculate_header(comptime arity: comptime_int, num_keys: u32) Header {
     };
 }
 
-pub fn construct_fingerprints(comptime Fingerprint: type, comptime arity: comptime_int, fingerprints: []Fingerprint, alloc: Allocator, hashes: []u64, header: *Header) ConstructError!void {
+pub fn construct_fingerprints(comptime Fingerprint: type, comptime arity: comptime_int, fingerprints: []Fingerprint, alloc: Allocator, hashes: []const u64, header: *Header) ConstructError!void {
     if (fingerprints.len != header.array_length) {
         return ConstructError.SizeMismatch;
     }
