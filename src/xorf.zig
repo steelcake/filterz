@@ -35,12 +35,12 @@ fn make_subhashes(comptime arity: comptime_int, header: *const Header, h: u64) [
     return subhashes;
 }
 
-pub fn filter_check(comptime Fingerprint: type, comptime arity: comptime_int, header: *const Header, fingerprints: []const Fingerprint, hash: u64) bool {
+pub fn filter_check(comptime Fingerprint: type, comptime arity: comptime_int, header: *const Header, fingerprints: [*]const Fingerprint, hash: u64) bool {
     const h = hash ^ header.seed;
     const subhashes = make_subhashes(arity, header, h);
     var f = make_fingerprint(Fingerprint, h);
     inline for (subhashes) |sh| {
-        f ^= fingerprints.ptr[sh];
+        f ^= fingerprints[sh];
     }
     return f == 0;
 }
@@ -247,7 +247,7 @@ pub fn Filter(comptime Fingerprint: type, comptime arity: comptime_int) type {
         }
 
         pub fn check(self: *const Self, hash: u64) bool {
-            return filter_check(Fingerprint, arity, &self.header, self.fingerprints, hash);
+            return filter_check(Fingerprint, arity, &self.header, self.fingerprints.ptr, hash);
         }
 
         pub fn mem_usage(self: *const Self) usize {
