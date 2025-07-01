@@ -76,6 +76,8 @@ fn calculate_size_factor(comptime arity: comptime_int, size: u32) f64 {
 }
 
 pub fn calculate_header(comptime arity: comptime_int, num_keys: u32) Header {
+    std.debug.assert(num_keys > 0);
+
     const size = num_keys;
     const segment_length = @min(
         if (size == 0) 4 else calculate_segment_length(arity, size),
