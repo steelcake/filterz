@@ -3,7 +3,7 @@ read addrs
 finished reading addrs
 parsing sections
 num_sections=50
-ribbon128_16: bench.BenchStats{ .query_time = 7313021, .construct_time = 2402050035, .mem_usage = 43582960, .ideal_mem_usage = 42236308, .num_hits = 3, .num_queries = 205050 } Estimated query cost: 7913021.0000, Space Overhead: 0.0319, Time per query: 35
-xorf3_16: bench.BenchStats{ .query_time = 2135042, .construct_time = 1301699952, .mem_usage = 48480256, .ideal_mem_usage = 42236308, .num_hits = 3, .num_queries = 205050 } Estimated query cost: 2735042.0000, Space Overhead: 0.1478, Time per query: 10
-xorf4_16: bench.BenchStats{ .query_time = 2506737, .construct_time = 2430386423, .mem_usage = 45858816, .ideal_mem_usage = 42236308, .num_hits = 4, .num_queries = 205050 } Estimated query cost: 3306737.0000, Space Overhead: 0.0858, Time per query: 12
-sbbf24: bench.BenchStats{ .query_time = 1391011, .construct_time = 702756631, .mem_usage = 63355968, .ideal_mem_usage = 63354462, .num_hits = 32, .num_queries = 205050 } Estimated query cost: 7791011.0000, Space Overhead: 0.0000, Time per query: 6
+ribbon128_16: bench.BenchStats{ .query_time = 6805132, .construct_time = 2110262508, .mem_usage = 43582960, .ideal_mem_usage = 42236308, .num_hits = 3, .num_queries = 205050 } Estimated query cost: 7405132.0000, Space Overhead: 0.0319, Time per query: 33
+xorf3_16: bench.BenchStats{ .query_time = 2200807, .construct_time = 1217296991, .mem_usage = 48480256, .ideal_mem_usage = 42236308, .num_hits = 2, .num_queries = 205050 } Estimated query cost: 2600807.0000, Space Overhead: 0.1478, Time per query: 10
+xorf4_16: bench.BenchStats{ .query_time = 2446748, .construct_time = 2760607590, .mem_usage = 45858816, .ideal_mem_usage = 42236308, .num_hits = 2, .num_queries = 205050 } Estimated query cost: 2846748.0000, Space Overhead: 0.0858, Time per query: 11
+sbbf24: bench.BenchStats{ .query_time = 1383174, .construct_time = 632709048, .mem_usage = 63355968, .ideal_mem_usage = 63354462, .num_hits = 32, .num_queries = 205050 } Estimated query cost: 7783174.0000, Space Overhead: 0.0000, Time per query: 6
