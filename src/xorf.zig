@@ -4,6 +4,10 @@ const rotl = math.rotl;
 const Allocator = std.mem.Allocator;
 const SplitMix64 = std.Random.SplitMix64;
 
+fn apply_seed(hash: u64, seed: u64) u64 {
+    return std.hash.Murmur2_64.hashUint64WithSeed(hash, seed);
+}
+
 fn make_fingerprint(comptime Fingerprint: type, hash: u64) Fingerprint {
     return @truncate(hash ^ (hash >> 32));
 }
@@ -36,7 +40,7 @@ fn make_subhashes(comptime arity: comptime_int, header: *const Header, h: u64) [
 }
 
 pub fn filter_check(comptime Fingerprint: type, comptime arity: comptime_int, header: *const Header, fingerprints: [*]const Fingerprint, hash: u64) bool {
-    const h = hash ^ header.seed;
+    const h = apply_seed(hash, header.seed);
     const subhashes = make_subhashes(arity, header, h);
     var f = make_fingerprint(Fingerprint, h);
     inline for (subhashes) |sh| {
@@ -154,7 +158,7 @@ pub fn construct_fingerprints(comptime Fingerprint: type, comptime arity: compti
         @memset(set_count, 0);
 
         for (hashes) |hash| {
-            const h = hash ^ next_seed;
+            const h = apply_seed(hash, next_seed);
             const subhashes = make_subhashes(arity, header, h);
             for (subhashes) |subh| {
                 set_xormask[subh] ^= h;
