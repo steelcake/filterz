@@ -134,7 +134,7 @@ pub fn construct_fingerprints(comptime Fingerprint: type, comptime arity: compti
     var iter_no: u32 = 0;
     while (true) : (iter_no += 1) {
         if (iter_no + 1 > 100) {
-            unreachable;
+            return ConstructError.ConstructFail;
         }
         const array_len = header.array_length;
 
@@ -215,8 +215,6 @@ pub fn construct_fingerprints(comptime Fingerprint: type, comptime arity: compti
 
         return;
     }
-
-    return ConstructError.ConstructFail;
 }
 
 pub fn Filter(comptime Fingerprint: type, comptime arity: comptime_int) type {

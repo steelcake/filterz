@@ -16,6 +16,7 @@ pub fn build(b: *std.Build) void {
         .root_source_file = b.path("src/bench.zig"),
         .target = target,
         .optimize = optimize,
+        .use_llvm = true,
     });
     bench.root_module.addImport("filterz", filterz_module);
 
