@@ -80,8 +80,6 @@ fn calculate_size_factor(comptime arity: comptime_int, size: u32) f64 {
 }
 
 pub fn calculate_header(comptime arity: comptime_int, num_keys: u32) Header {
-    std.debug.assert(num_keys > 0);
-
     const size = num_keys;
     const segment_length = @min(
         if (size == 0) 4 else calculate_segment_length(arity, size),
@@ -90,8 +88,8 @@ pub fn calculate_header(comptime arity: comptime_int, num_keys: u32) Header {
     const segment_length_mask = segment_length - 1;
     const size_factor = if (size <= 1) 0 else calculate_size_factor(arity, size);
     const capacity = if (size <= 1) 0 else @as(u32, @intFromFloat(@round(@as(f64, @floatFromInt(size)) * size_factor)));
-    const init_segment_count = (capacity + segment_length - 1) / segment_length - (arity - 1);
-    const array_length_calc = (init_segment_count + arity - 1) * segment_length;
+    const init_segment_count = (capacity + segment_length - 1) / segment_length;
+    const array_length_calc = init_segment_count * segment_length;
     const segment_count_calc = (array_length_calc + segment_length - 1) / segment_length;
     const segment_count = if (segment_count_calc <= arity - 1)
         1
