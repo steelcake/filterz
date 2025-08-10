@@ -1,6 +1,6 @@
 const std = @import("std");
 const Allocator = std.mem.Allocator;
-const hash_fn = std.hash.RapidHash.hash;
+const hash_fn = std.hash.XxHash3.hash;
 
 const xorf = @import("xorf.zig");
 
