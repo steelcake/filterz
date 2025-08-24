@@ -1,11 +1,16 @@
 const std = @import("std");
+const FixedBufferAllocator = std.heap.FixedBufferAllocator;
 const Allocator = std.mem.Allocator;
 const hash_fn = std.hash.XxHash3.hash;
 
 const xorf = @import("xorf.zig");
 
-fn to_fuzz(_: void, data: []const u8) anyerror!void {
-    var general_purpose_allocator: std.heap.GeneralPurposeAllocator(.{}) = .init;
+fn to_fuzz(data: []const u8, base_alloc: Allocator) anyerror!void {
+    var general_purpose_allocator = std.heap.GeneralPurposeAllocator(.{
+        .backing_allocator_zeroes = false,
+    }){
+        .backing_allocator = base_alloc,
+    };
     const gpa = general_purpose_allocator.allocator();
     defer {
         switch (general_purpose_allocator.deinit()) {
@@ -85,6 +90,20 @@ fn hash_key(key: []const u8) u64 {
     return hash_fn(0, key);
 }
 
+const FuzzContext = struct {
+    fb_alloc: *FixedBufferAllocator,
+};
+
+fn to_fuzz_wrap(ctx: FuzzContext, data: []const u8) anyerror!void {
+    ctx.fb_alloc.reset();
+    return to_fuzz(data, ctx.fb_alloc.allocator()) catch |e| {
+        if (e == error.ShortInput) return {} else return e;
+    };
+}
+
 test "fuzz" {
-    try std.testing.fuzz({}, to_fuzz, .{});
+    var fb_alloc = FixedBufferAllocator.init(std.heap.page_allocator.alloc(u8, 1 << 20) catch unreachable);
+    try std.testing.fuzz(FuzzContext{
+        .fb_alloc = &fb_alloc,
+    }, to_fuzz_wrap, .{});
 }
