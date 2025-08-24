@@ -7,43 +7,16 @@ const Timer = std.time.Timer;
 const xorf = filterz.xorf;
 const sbbf = filterz.sbbf;
 const ribbon = filterz.ribbon;
-// const huge_alloc = @import("huge_alloc");
-// const HugePageAlloc = huge_alloc.HugePageAlloc;
-const hash_fn = std.hash.RapidHash.hash;
+const hash_fn = std.hash.XxHash3.hash;
 
 fn hash_addr(addr: []const u8) u64 {
     return hash_fn(0, addr);
 }
 
-// fn hash_addr(seed: u64, addr: []const u8) u64 {
-//     var hash: [8]u8 align(8) = @bitCast(seed);
-
-//     for (0..20) |i| {
-//         hash[i % 8] ^= addr[i];
-//     }
-
-//     //     // for (0..2) |i| {
-//     //     //     const ptr: *const u64 = @ptrCast(@alignCast(&addr[i * 8]));
-//     //     //     hash ^= ptr.*;
-//     //     // }
-
-//     //     // const ptr: *const u32 = @ptrCast(@alignCast(&addr[16]));
-//     //     // hash ^= @as(u64, ptr.*);
-
-//     //     // for (0..addr.len % 8) |i| {
-//     //     //     hash ^= @as(u64, addr[64 + i]) << (i * 8);
-//     //     // }
-
-//     return @bitCast(hash);
-// }
-
 const Address = [20]u8;
 
 pub fn main() !void {
-    // var ha_alloc = HugePageAlloc.init(.{ .budget_log2 = 34 });
-    // defer ha_alloc.deinit();
-
-    const alloc = std.heap.page_allocator; // ha_alloc.allocator();
+    const alloc = std.heap.page_allocator;
 
     const indices = try read_file(alloc, "bench-data/addr.index", null);
     defer alloc.free(indices);
@@ -60,15 +33,15 @@ pub fn main() !void {
     var start: usize = 0;
     var index_iter = std.mem.splitScalar(u8, indices[1..], ' ');
 
-    var sections = ArrayList([]const Address).init(alloc);
-    defer sections.deinit();
+    var sections = try ArrayList([]const Address).initCapacity(alloc, 32);
+    defer sections.deinit(alloc);
 
     std.debug.print("parsing sections\n", .{});
 
     while (index_iter.next()) |index| {
         const idx = try std.fmt.parseInt(usize, index, 10);
         const section = addrs[start .. start + idx];
-        try sections.append(section);
+        try sections.append(alloc, section);
         start += idx;
     }
 
@@ -76,8 +49,8 @@ pub fn main() !void {
 
     std.debug.print("num_sections={d}\n", .{sections.items.len});
 
-    var query_hashes = ArrayList(u64).init(alloc);
-    defer query_hashes.deinit();
+    var query_hashes = try ArrayList(u64).initCapacity(alloc, 32);
+    defer query_hashes.deinit(alloc);
 
     var addr_scratch: Address align(64) = undefined;
 
@@ -90,14 +63,14 @@ pub fn main() !void {
             @panic("bad address");
         }
         const hash = hash_addr(addr);
-        try query_hashes.append(hash);
+        try query_hashes.append(alloc, hash);
     }
 
     var randy = std.Random.ChaCha.init(.{0} ** 32);
     for (0..4096) |_| {
         randy.fill(&addr_scratch);
         const hash = hash_addr(&addr_scratch);
-        try query_hashes.append(hash);
+        try query_hashes.append(alloc, hash);
     }
 
     inline for (FILTERS, FILTER_NAMES) |Filter, name| @"continue": {
@@ -323,19 +296,9 @@ fn has_duplicate(
     return false;
 }
 
-fn print_hex(alloc: Allocator, addr: Address) !void {
-    var list = ArrayList(u8).init(alloc);
-    defer list.deinit();
-
-    var fmat = std.fmt.fmtSliceHexLower(&addr);
-
-    try fmat.format(
-        "{}",
-        .{},
-        list.writer(),
-    );
-
-    std.debug.print("{s}\n", .{list.items});
+fn print_hex(addr: Address) void {
+    const hex = try std.fmt.bytesToHex(&addr);
+    std.debug.print("{s}\n", .{hex});
 }
 
 fn read_file(alloc: Allocator, path: []const u8, size_hint: ?usize) ![]u8 {
