@@ -18,12 +18,12 @@ const Address = [20]u8;
 pub fn main() !void {
     const alloc = std.heap.page_allocator;
 
-    const indices = try read_file(alloc, "bench-data/addr.index", null);
+    const indices = try read_file(alloc, "bench-data/addr.index");
     defer alloc.free(indices);
 
     std.debug.print("read addrs\n", .{});
 
-    const raw_addrs = try read_file(alloc, "bench-data/addr.data", 10 * 1024 * 1024 * 1024);
+    const raw_addrs = try read_file(alloc, "bench-data/addr.data");
     defer alloc.free(raw_addrs);
 
     std.debug.print("finished reading addrs\n", .{});
@@ -301,15 +301,22 @@ fn print_hex(addr: Address) void {
     std.debug.print("{s}\n", .{hex});
 }
 
-fn read_file(alloc: Allocator, path: []const u8, size_hint: ?usize) ![]u8 {
+fn read_file(alloc: Allocator, path: []const u8) ![]u8 {
     const file = try std.fs.cwd().openFile(path, .{});
     defer file.close();
 
-    return try file.readToEndAllocOptions(
-        alloc,
-        std.math.maxInt(usize),
-        size_hint,
-        std.mem.Alignment.@"64",
-        null,
-    );
+    const stats = try file.stat();
+
+    const buf = try alloc.alloc(u8, stats.size);
+    errdefer alloc.free(buf);
+
+    var reader = file.reader(&.{});
+
+    var offset: usize = 0;
+    while (offset < stats.size) {
+        const n_read = try reader.read(buf);
+        offset += n_read;
+    }
+
+    return buf;
 }

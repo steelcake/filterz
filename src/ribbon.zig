@@ -176,7 +176,7 @@ fn check_filter(comptime CoeffRow: type, comptime RealResultRow: type, solution_
         const idx = i *% num_rows_per_vec;
 
         var rr: Vec = undefined;
-        for (0..num_rows_per_vec) |j| {
+        inline for (0..num_rows_per_vec) |j| {
             rr[j] = @truncate(std.math.shr(CoeffRow, coeff_row, idx +% j));
         }
 
