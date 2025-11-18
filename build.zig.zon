@@ -1,7 +1,7 @@
 .{
     .name = .filterz,
     .fingerprint = 0x1abdf29d7b5969f,
-    .version = "0.0.10",
+    .version = "0.0.11",
     .minimum_zig_version = "0.16.0-dev.464+df1909900",
     .dependencies = .{},
     .paths = .{

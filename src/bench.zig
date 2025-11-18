@@ -311,12 +311,7 @@ fn read_file(alloc: Allocator, path: []const u8) ![]u8 {
     errdefer alloc.free(buf);
 
     var reader = file.reader(&.{});
-
-    var offset: usize = 0;
-    while (offset < stats.size) {
-        const n_read = try reader.read(buf);
-        offset += n_read;
-    }
+    try reader.interface.readSliceAll(buf);
 
     return buf;
 }
